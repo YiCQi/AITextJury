@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# Node
+node_modules/
+apps/web/dist/
+*.tsbuildinfo
+
+# Runtime data (history, keys, cache, calibration) — stays on your machine
+data/history/
+data/cache/
+data/calibration/
+data/providers.json
+data/settings.json
+data/plugins/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Local agent workspace / scratch files
+.aionrs/
+.smoke_*.py

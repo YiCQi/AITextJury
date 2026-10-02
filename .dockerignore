@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1
+
+node_modules
+web/node_modules
+**/__pycache__
+**/*.pyc
+.venv
+venv
+data
+*.log
+.git
+.aionrs
+.smoke_e2e.py

@@ -1,0 +1,35 @@
+# One-command local workbench:
+#
+#     docker compose up
+#
+# Slim variant drops the native detector stack (torch/HF), so the image is
+# ~200 MB and only Stylometry + plugin detectors + BYOK LLM-Judge run.
+# To use it, set `SLIM: "1"` in the build.args block below, then:
+#
+#     docker compose up --build
+#
+# Native models are cached under the named volume; provider keys you enter in
+# the UI live in the same volume (data/providers.json), never in the image.
+
+services:
+  zeroaibench:
+    # build with SLIM=1 in the build.args block below for the no-torch image
+    build:
+      context: .
+      args:
+        SLIM: "0"
+    image: zeroaibench:latest
+    ports:
+      - "8000:8000"
+    environment:
+      ZEROAIBENCH_HOME: /data
+      # Keys entered in the UI are stored under ZEROAIBENCH_HOME. To instead
+      # inject a key at start-up, uncomment — the UI then shows it masked:
+      # OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    volumes:
+      - zeroaibench_data:/data
+    restart: unless-stopped
+
+volumes:
+  zeroaibench_data:
