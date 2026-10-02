@@ -1,0 +1,17 @@
+Add one-command setup/dev scripts (Win + Linux/macOS) and README quickstart overhaul
+
+New users cloning from GitHub get a two-command path regardless of their
+Python/conda/Node state: scripts/setup.ps1|sh creates an isolated venv under
+apps/api/.venv (system interpreters never touched), installs backend deps
+with automatic Tsinghua-mirror fallback, and installs web deps.
+
+scripts/dev.ps1|sh start backend + Vite in visible, independently stoppable
+windows/processes and open the UI.
+
+README: quickstart now leads with clone + scripts; manual steps demoted to
+an expandable "what the scripts do"; new Troubleshooting section (missing
+Python, running outside the venv -> ModuleNotFoundError, pip/npm mirrors,
+HF_ENDPOINT for model downloads, busy ports).
+
+Fix in setup.ps1: avoid $args automatic-variable name (PowerShell function
+arg splat collision) and try/catch each python candidate.

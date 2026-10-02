@@ -40,26 +40,46 @@ anyone can write a detector plugin, plug it in, and compare methods openly.
 
 ## Quickstart
 
-**Backend** (Python ≥ 3.10):
+Clone, one command to set up, one command to run. The setup script creates an
+**isolated virtualenv** (`apps/api/.venv`) — your system/conda Python is never
+touched, and no pre-existing environment is assumed or required:
 
 ```bash
+git clone https://github.com/YiCQi/ZeroAIBench.git
+cd ZeroAIBench
+
+# Windows (PowerShell)
+scripts\setup.ps1         # one-time: venv + backend deps + web deps (~1 min)
+scripts\dev.ps1           # start API + UI, opens http://localhost:5173
+
+# Linux / macOS
+./scripts/setup.sh
+./scripts/dev.sh
+```
+
+That's it for the fast path — stylometry and plugin detectors are live out of
+the box; add `-Ml` (Windows) / `--with-ml` (Linux/macOS) to setup for the
+native-LM detectors (~2 GB: torch + GPT-2 family, then fully offline).
+
+<details>
+<summary><b>What the scripts do</b> — the manual equivalent, if you prefer</summary>
+
+```bash
+# Backend (Python >= 3.10) — in a fresh venv of your own:
 cd apps/api
 pip install -e .                # fastapi + uvicorn + httpx + pydantic
-pip install -e ".[ml]"          # optional: torch + transformers for local-LM detectors
-python -m zeroaibench           # API on http://127.0.0.1:8000
-#   or: uvicorn zeroaibench.main:app --reload
-```
+pip install -e ".[ml]"         # optional: torch + transformers
+python -m zeroaibench          # API on http://127.0.0.1:8000
 
-**Frontend** (Node ≥ 18):
-
-```bash
+# Frontend (Node >= 18):
 cd apps/web
 npm install
-npm run dev                     # http://localhost:5173 (proxies /api → 8000)
+npm run dev                    # http://localhost:5173 (proxies /api -> 8000)
 ```
+</details>
 
-**Docker** (one command, image builds the frontend for you and serves it
-on :8000):
+**Docker** (no Python/Node needed at all; image builds the frontend for you
+and serves it on :8000):
 
 ```bash
 docker compose up               # http://localhost:8000  (UI + API together)
@@ -77,11 +97,24 @@ python -m zeroaibench.cli analyze article.txt -d stylometry,lm_perplexity -o rep
 python -m zeroaibench.cli calibrate -d stylometry --dataset demo
 ```
 
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `Python 3.10+ not found` from setup | Install Python 3.10+ from python.org (tick *Add to PATH*), or `winget install Python.Python.3.12`, or skip Python entirely with `docker compose up` |
+| `ModuleNotFoundError: fastapi` etc. | You ran `python -m zeroaibench` outside the venv. Use `scripts\dev.ps1`, or activate first: `apps\api\.venv\Scripts\activate` (Windows) / `source apps/api/.venv/bin/activate` (macOS/Linux) |
+| pip hangs / times out | Setup auto-retries via the Tsinghua mirror; to do it manually: `pip install -e . -i https://pypi.tuna.tsinghua.edu.cn/simple` |
+| npm install fails | `npm config set registry https://registry.npmmirror.com`, rerun setup |
+| GPT-2 model download (after `-Ml`) is blocked | `$env:HF_ENDPOINT = "https://hf-mirror.com"` (Windows) or `export HF_ENDPOINT=https://hf-mirror.com` (bash) before analyzing |
+| Port 8000 / 5173 already in use | Stop the other process, or `uvicorn zeroaibench.main:app --port 8001` + the Vite proxy line in `apps/web/vite.config.ts` |
+
 ### 快速开始（中文）
 
 ```bash
-cd apps/api && pip install -e . && python -m zeroaibench     # 后端 :8000
-cd apps/web && npm install && npm run dev                    # 前端 :5173
+git clone https://github.com/YiCQi/ZeroAIBench.git && cd ZeroAIBench
+scripts\setup.ps1        # Windows：一次性建好隔离环境（不碰你的 conda/系统 Python）
+scripts\dev.ps1          # 启动后端+前端，自动打开 http://localhost:5173
+# Linux/macOS 同理：./scripts/setup.sh && ./scripts/dev.sh
 # 或者一条命令（自带前端构建）：docker compose up → http://localhost:8000
 ```
 
