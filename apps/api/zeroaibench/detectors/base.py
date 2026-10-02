@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
+from typing import Any
 
 from ..schemas import Availability, CalibrationInfo, DetectorResult, \
     EvidenceItem, SegmentScore, Verdict
@@ -36,10 +37,15 @@ class RawSegment:
 
 @dataclass
 class RawOutcome:
-    """What a detector returns before standardization."""
+    """What a detector returns before standardization.
+
+    `signals` is a free-form bag: mostly numeric statistics, but metadata
+    entries (which model scored the text...) are legal too — see
+    schemas.SignalValue. Cached values round-trip through JSON as-is.
+    """
     raw_score: float | None
     raw_direction: str        # "higher_is_ai" | "lower_is_ai"
-    signals: dict[str, float] = field(default_factory=dict)
+    signals: dict[str, Any] = field(default_factory=dict)
     segment_scores: list[RawSegment] = field(default_factory=list)
     evidence: list[EvidenceItem] = field(default_factory=list)
     model: str | None = None

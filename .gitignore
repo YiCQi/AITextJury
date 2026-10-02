@@ -32,5 +32,5 @@ Thumbs.db
 
 # Local agent workspace / scratch files
 .aionrs/
-.smoke_*.py
+.smoke_*
 .gitcommit-msg*.txt

@@ -127,7 +127,6 @@ def tokenize_for_heatmap(model_id: str, text: str, sentences, max_ctx: int) -> T
     return TokenizedText(
         input_ids=ids, offsets=offsets,
         sent_start_chars=sent_start_chars,
-        sent_id_by_char=[],  # computed lazily by token_sentence()
         sentences_by_index={i: sid for i, sid in enumerate(sentence_ids)},
         max_ctx=max_ctx, model_id=model_id,
     )

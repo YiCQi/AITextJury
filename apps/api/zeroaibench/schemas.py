@@ -13,9 +13,13 @@ Score semantics (critical for comparability):
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, Field
+
+# A detector's `signals` bag holds its own statistics. Mostly numbers, but
+# metadata entries (which model scored, which provider answered...) are legal.
+SignalValue = Union[float, int, str, bool, None]
 
 
 class Verdict(str, Enum):
@@ -82,7 +86,10 @@ class DetectorResult(BaseModel):
     verdict: Optional[Verdict] = None
     confidence: Optional[float] = None
     threshold: float = 0.5
-    signals: dict[str, float] = Field(default_factory=dict)
+    # Free-form per-detector signal bag. Values are usually numbers, but
+    # detectors may carry metadata (e.g. which model scored the text), so
+    # strings / bools / ints are all legal here.
+    signals: dict[str, "SignalValue"] = Field(default_factory=dict)
     segment_scores: list[SegmentScore] = Field(default_factory=list)
     evidence: list[EvidenceItem] = Field(default_factory=list)
     calibration: CalibrationInfo = Field(default_factory=CalibrationInfo)

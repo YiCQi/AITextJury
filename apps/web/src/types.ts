@@ -69,7 +69,9 @@ export interface DetectorResult {
   verdict: Verdict | null;
   confidence: number | null;
   threshold: number;
-  signals: Record<string, number>;
+  // Free-form signal bag: numbers usually, but metadata entries
+  // (e.g. binoculars' performer_model) may be strings/bools/null.
+  signals: Record<string, number | string | boolean | null>;
   segment_scores: SegmentScore[];
   evidence: EvidenceItem[];
   calibration: CalibrationInfo;

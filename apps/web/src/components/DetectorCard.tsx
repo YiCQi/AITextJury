@@ -76,7 +76,7 @@ export function DetectorCard({ result }:{ result: DetectorResult }) {
           }}>
             {Object.entries(result.signals).map(([k, v]) => (
               <div key={k} title={k}>
-                {k} = {Number.isFinite(v) && Math.abs(v) > 0 && Math.abs(v) < 1e6
+                {k} = {typeof v === "number" && Number.isFinite(v) && Math.abs(v) > 0 && Math.abs(v) < 1e6
                   ? v.toFixed(3) : String(v)}
               </div>
             ))}
