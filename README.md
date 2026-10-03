@@ -26,18 +26,6 @@ anyone can write a detector plugin, plug it in, and compare methods openly.
              Binoculars                Ollama, anything)
 ```
 
-## Why
-
-* Single-number detectors are opaque and easy to trust wrong. ZeroAIBench
-  shows **why** a text looks AI-generated: which sentences, which signals,
-  with how much confidence — and how well-calibrated that confidence is.
-* Different methods fail differently. Combining independent evidence —
-  stylometry surprisal, model-agreement, judge-reasoning — is more robust
-  than any single score, and *disagreement itself is surfaced as a signal*.
-* Detection research moves fast. Rather than freezing one method, the
-  Detector API makes methods swappable: built-in ones today, community
-  plugins tomorrow, publicly comparable forever.
-
 ## Quickstart — two doors, same house
 
 ### 🖱️ No-code (Windows): download → double-click
@@ -47,10 +35,10 @@ root folder has four double-click helpers:
 
 | Double-click | What it does |
 |---|---|
-| **`安装环境.bat`** | first-time only (~1–3 min): creates a private environment — your existing Python/conda untouched |
-| **`启动工作台.bat`** | any time: starts the workbench, browser opens **http://localhost:8000**. The black window *is* the tool: keep it open while using, close it to stop |
-| **`安装本地模型检测器.bat`** | *optional, once*: unlocks LLM-Perplexity / Fast-DetectGPT / Binoculars (~2–3 GB, then auto-runs a demo calibration) |
-| **`创建桌面快捷方式.bat`** | *optional, once*: puts a “ZeroAIBench 工作台” icon on your desktop |
+| **`INSTALL-ENVIRONMENT.bat`** | first-time only (~1–3 min): creates a private environment — your existing Python/conda untouched |
+| **`START-WORKBENCH.bat`** | any time: starts the workbench, browser opens **http://localhost:8000**. The black window *is* the tool: keep it open while using, close it to stop |
+| **`INSTALL-LM-DETECTORS.bat`** | *optional, once*: unlocks LLM-Perplexity / Fast-DetectGPT / Binoculars (~2–3 GB, then auto-runs a demo calibration) |
+| **`CREATE-DESKTOP-SHORTCUT.bat`** | *optional, once*: puts a `ZeroAIBench` icon on your desktop |
 
 So the whole journey is: **Download ZIP → unzip → double-click 1 → from now
 on double-click 2.** Uninstalling = deleting the folder. Nothing is left in
@@ -177,50 +165,6 @@ python -m zeroaibench.cli calibrate -d stylometry --dataset demo
 | npm install fails | `npm config set registry https://registry.npmmirror.com`, rerun setup |
 | GPT-2 model download (after `-Ml`) is blocked | `$env:HF_ENDPOINT = "https://hf-mirror.com"` (Windows) or `export HF_ENDPOINT=https://hf-mirror.com` (bash) before analyzing |
 | Port 8000 / 5173 already in use | Stop the other process, or `uvicorn zeroaibench.main:app --port 8001` + the Vite proxy line in `apps/web/vite.config.ts` |
-
-### 快速开始（中文）
-
-**零基础用户（Windows，全程不碰命令行）：**
-
-根目录放了 4 个双击即用的文件：
-
-| 双击 | 作用 |
-|---|---|
-| **`安装环境.bat`** | 只需一次（1–3 分钟）：自动创建隔离环境，不碰电脑上任何其他 Python/conda |
-| **`启动工作台.bat`** | 每次使用：浏览器自动打开 http://localhost:8000；黑窗口就是程序本体——开着=运行，关闭=退出 |
-| **`安装本地模型检测器.bat`** | 可选、一次：解锁 LLM-Perplexity / Fast-DetectGPT / Binoculars 三个检测器（约 2–3 GB，装完自动跑示例校准） |
-| **`创建桌面快捷方式.bat`** | 可选、一次：在桌面放一个“ZeroAIBench 工作台”图标 |
-
-完整旅程 = **下载 ZIP → 解压 → 双击第 1 个 → 以后双击第 2 个**。
-卸载 = 直接删除文件夹，系统零残留。
-
-（前提：装好 Python 3.10+，安装时勾选 **"Add Python to PATH"**。不需要 Node。）
-
-**开发者 / Linux / macOS：**
-
-```bash
-git clone https://github.com/YiCQi/ZeroAIBench.git && cd ZeroAIBench
-scripts\setup.ps1        # Windows：一次性建好隔离环境（不碰你的 conda/系统 Python）
-scripts\dev.ps1          # 启动后端+Vite 热重载前端（:5173，改前端代码时用）
-# Linux/macOS 同理：./scripts/setup.sh && ./scripts/dev.sh
-# 或者一条命令（自带前端构建）：docker compose up → http://localhost:8000
-# 日常自用其实只需：cd apps\api && python -m zeroaibench → :8000（UI 已打进包里）
-```
-
-粘贴文章 → 勾选检测器（Stylometry 零依赖即可用；本地 LM 检测器需要
-`pip install -e ".[ml]"`；LLM Judge 在 Providers 页接入你自己的
-OpenAI / Gemini / DeepSeek / OpenRouter / Ollama / 任何 OpenAI 兼容端点）→
-Analyze。你会得到：每个检测器的分数 + 原始统计量 + 句子级 heatmap +
-证据解释 + 校准状态（AUC/ECE）+ 跨检测器共识与分歧提示。
-
-### 关于 exe 版本（为什么不打包单个 .exe）
-
-技术上可行（PyInstaller），但体验反而更差：torch 打进去约 2 GB+，
-onefile 模式**每次启动都需要解压 1–3 分钟**，杀毒软件误报频发。所以：
-- **现在的"绿色版"就是答案**——ZIP 下载 + 双击两个 .bat，已经是
-  "不用装任何东西"的体验（只依赖 Python）；
-- 下一步见 [ROADMAP](docs/ROADMAP.md)：将用嵌入式 Python（免装
-  Python，约 20 MB）打包 portable zip，做到**真·零依赖**单压缩包。
 
 ## The detector panel
 

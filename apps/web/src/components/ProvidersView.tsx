@@ -85,7 +85,7 @@ export function ProvidersView() {
           Plug in OpenAI, Gemini, DeepSeek, OpenRouter, Groq, a local Ollama
           (no key needed) or any OpenAI-compatible endpoint (vLLM, LM Studio…).
           Keys are stored in <code>{storage || "data/providers.json"}</code> on
-          this machine, sent <b>只 toward the provider you configure</b>, and
+          this machine, sent <b>only toward the provider you configure</b>, and
           never rendered back in full.
         </p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
