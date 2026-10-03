@@ -13,6 +13,12 @@ build/
 # Node
 node_modules/
 apps/web/dist/
+# ...but the built web UI IS shipped inside the API package so end users
+# (who may not have Node) get the workbench at :8000 straight from
+# `python -m zeroaibench`. Rebuild: cd apps/web && npm run build, then copy
+# dist/* -> ../api/zeroaibench/static/
+!apps/api/zeroaibench/static
+!apps/api/zeroaibench/static/**
 *.tsbuildinfo
 
 # Runtime data (history, keys, cache, calibration) — stays on your machine

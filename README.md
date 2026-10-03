@@ -38,11 +38,28 @@ anyone can write a detector plugin, plug it in, and compare methods openly.
   Detector API makes methods swappable: built-in ones today, community
   plugins tomorrow, publicly comparable forever.
 
-## Quickstart
+## Quickstart — two doors, same house
 
-Clone, one command to set up, one command to run. The setup script creates an
-**isolated virtualenv** (`apps/api/.venv`) — your system/conda Python is never
-touched, and no pre-existing environment is assumed or required:
+### 🖱️ No-code (Windows): download → double-click
+
+You never touch a terminal. Nothing is installed into your system.
+
+1. On the GitHub repo page click **Code → Download ZIP**, unzip anywhere
+   (or `git clone` if you have git).
+2. Inside the folder, double-click **`安装环境.bat`** — once, ever (~1–3 min:
+   it creates a private environment; your existing Python/conda is untouched).
+3. From now on, double-click **`启动工作台.bat`** any time → your browser
+   opens **http://localhost:8000**.
+   - The black window that appears **is** the tool: keep it open while using,
+     close it to stop.
+   - For Binoculars / Fast-DetectGPT / LLM-Perplexity, one extra line in a
+     terminal once — see *Native LM detectors* below.
+
+Requirements: Windows + [Python 3.10+](https://www.python.org/downloads/)
+(tick **"Add Python to PATH"**). That's all — the built-in web UI ships
+inside the package, so **Node.js is not needed**.
+
+### ⌨️ Developers / Linux / macOS: clone + scripts
 
 ```bash
 git clone https://github.com/YiCQi/ZeroAIBench.git
@@ -50,10 +67,11 @@ cd ZeroAIBench
 
 # Windows (PowerShell)
 scripts\setup.ps1         # one-time: venv + backend deps + web deps (~1 min)
-scripts\dev.ps1           # start API + UI, opens http://localhost:5173
+scripts\dev.ps1           # Vite dev UI on :5173 with hot-reload (needs Node 18+)
 
 # Linux / macOS
 ./scripts/setup.sh
+./scripts/dev.sh
 ./scripts/dev.sh
 ```
 
@@ -89,6 +107,57 @@ Set `SLIM: "1"` in `docker-compose.yml` `build.args` for a ~200 MB image
 without the torch/transformers stack (Stylometry + plugins + BYOK Judge
 still work). Model caches and your provider keys live in the named volume.
 
+### Native LM detectors (optional, one command)
+
+LLM-Perplexity / Fast-DetectGPT / Binoculars / HF-Classifier need torch.
+Enable them (once):
+
+```powershell
+# Windows
+scripts\setup.ps1 -Ml          # + ~2 GB: torch + transformers
+```
+```bash
+# Linux / macOS
+./scripts/setup.sh --with-ml
+```
+
+First analysis then auto-downloads the GPT-2 family (~2 GB) and caches it
+— fully offline after that. Behind a restricted network, set
+`HF_ENDPOINT=https://hf-mirror.com` first (see Troubleshooting).
+
+### Using the workbench (the part no README usually tells you)
+
+The **Workbench tab** is 90% of your time: paste the text → tick detectors →
+**Analyze**. Then read the page top-to-bottom in this order:
+
+1. **Consensus** — the calibration-weighted vote across detectors, with an
+   explicit agreement level. If detectors disagree, the notes say *who said
+   what* — disagreement is information, not a bug.
+2. **Per-detector cards** — every `score` is normalized so **higher = more
+   AI**, always (`uncertain` is a verdict, not a failure). Raw values shown
+   under evidence can point the other way; each card states its direction,
+   e.g. *Binoculars: raw 6.4, lower = AI*.
+3. **Heatmap** — red ≈ AI-looking, blue ≈ human-lenient, per sentence or
+   paragraph. Answers "**which part** looks AI."
+4. **Evidence chips** — the numbers behind the verdict: perplexity 2.9,
+   burstiness 0.08, 11 stock-phrase hits… Answers "**why**." These are the
+   bits you can quote to a human.
+
+**Providers tab**: paste any OpenAI-compatible or Gemini API key (DeepSeek,
+OpenRouter, or a local Ollama — even keyless) to enable the **LLM Judge**
+detector. Keys stay in local `data/providers.json`, masked on screen.
+
+**Calibration tab**: one click fits honest score curves on a labeled corpus
+(try the bundled 24-sample `demo` first) — afterwards cards show their AUC /
+accuracy, and consensus weights follow calibrated quality automatically.
+Feed your own `data/bench/*.jsonl` whenever you have labeled text.
+
+**Methodology tab**: what each detector measures, what it's blind to.
+
+> Privacy: all detectors except the LLM Judge run **on your machine**; text,
+> history, keys never leave it. Turn off the Judge (or point it at local
+> Ollama/vLLM) and ZeroAIBench is fully offline.
+
 **CLI** (same engine, scriptable):
 
 ```bash
@@ -110,12 +179,26 @@ python -m zeroaibench.cli calibrate -d stylometry --dataset demo
 
 ### 快速开始（中文）
 
+**零基础用户（Windows，全程不碰命令行）：**
+
+1. 项目主页点 **Code → Download ZIP**，解压到任意位置
+2. 双击 **`安装环境.bat`**（只需一次，约 1–3 分钟，自动创建隔离环境，不碰你电脑上的任何其他 Python）
+3. 以后每次用：双击 **`启动工作台.bat`** → 浏览器自动打开 http://localhost:8000
+   - 弹出的黑窗口就是程序本体：使用期间**保持开着**，关掉窗口就是退出
+4. 想加 Binoculars / Fast-DetectGPT / LLM-Perplexity？在终端里跑一次
+   `scripts\setup.ps1 -Ml`（见上面 *Native LM detectors*）
+
+（前提：装好 Python 3.10+，安装时勾选 **"Add Python to PATH"**。不需要 Node。）
+
+**开发者 / Linux / macOS：**
+
 ```bash
 git clone https://github.com/YiCQi/ZeroAIBench.git && cd ZeroAIBench
 scripts\setup.ps1        # Windows：一次性建好隔离环境（不碰你的 conda/系统 Python）
-scripts\dev.ps1          # 启动后端+前端，自动打开 http://localhost:5173
+scripts\dev.ps1          # 启动后端+Vite 热重载前端（:5173，改前端代码时用）
 # Linux/macOS 同理：./scripts/setup.sh && ./scripts/dev.sh
 # 或者一条命令（自带前端构建）：docker compose up → http://localhost:8000
+# 日常自用其实只需：cd apps\api && python -m zeroaibench → :8000（UI 已打进包里）
 ```
 
 粘贴文章 → 勾选检测器（Stylometry 零依赖即可用；本地 LM 检测器需要
@@ -123,6 +206,15 @@ scripts\dev.ps1          # 启动后端+前端，自动打开 http://localhost:5
 OpenAI / Gemini / DeepSeek / OpenRouter / Ollama / 任何 OpenAI 兼容端点）→
 Analyze。你会得到：每个检测器的分数 + 原始统计量 + 句子级 heatmap +
 证据解释 + 校准状态（AUC/ECE）+ 跨检测器共识与分歧提示。
+
+### 关于 exe 版本（为什么不打包单个 .exe）
+
+技术上可行（PyInstaller），但体验反而更差：torch 打进去约 2 GB+，
+onefile 模式**每次启动都需要解压 1–3 分钟**，杀毒软件误报频发。所以：
+- **现在的"绿色版"就是答案**——ZIP 下载 + 双击两个 .bat，已经是
+  "不用装任何东西"的体验（只依赖 Python）；
+- 下一步见 [ROADMAP](docs/ROADMAP.md)：将用嵌入式 Python（免装
+  Python，约 20 MB）打包 portable zip，做到**真·零依赖**单压缩包。
 
 ## The detector panel
 
