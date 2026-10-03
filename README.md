@@ -4,11 +4,12 @@
 
 ZeroAIBench is not "yet another AI detector" that prints one unreliable
 percentage. It is a **platform** where you paste text, run *many* independent
-detection methods side by side through one unified **Detector API**, and look
-at the underlying evidence — per-sentence heatmaps, surprisal, cross-model
-agreement, stylometric fingerprint, calibration quality — before forming any
-opinion. Think of it as a VirusTotal-style workbench for AI-generated text:
-anyone can write a detector plugin, plug it in, and compare methods openly.
+detection methods side by side through one unified **Detector API**, and
+look at the underlying evidence — per-sentence heatmaps, surprisal,
+cross-model agreement, stylometric fingerprint, calibration quality — before
+forming any opinion. Think of it as a VirusTotal-style workbench for
+AI-generated text: anyone can write a detector plugin, plug it in, and
+compare methods openly.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -26,145 +27,69 @@ anyone can write a detector plugin, plug it in, and compare methods openly.
              Binoculars                Ollama, anything)
 ```
 
-## Quickstart — two doors, same house
+## Quickstart
 
-### 🖱️ No-code (Windows): download → double-click
-
-You never touch a terminal. Nothing is installed into your system. The
-root folder has four double-click helpers:
-
-| Double-click | What it does |
-|---|---|
-| **`INSTALL-ENVIRONMENT.bat`** | first-time only (~1–3 min): creates a private environment — your existing Python/conda untouched |
-| **`START-WORKBENCH.bat`** | any time: starts the workbench, browser opens **http://localhost:8000**. The black window *is* the tool: keep it open while using, close it to stop |
-| **`INSTALL-LM-DETECTORS.bat`** | *optional, once*: unlocks LLM-Perplexity / Fast-DetectGPT / Binoculars (~2–3 GB, then auto-runs a demo calibration) |
-| **`CREATE-DESKTOP-SHORTCUT.bat`** | *optional, once*: puts a `ZeroAIBench` icon on your desktop |
-
-So the whole journey is: **Download ZIP → unzip → double-click 1 → from now
-on double-click 2.** Uninstalling = deleting the folder. Nothing is left in
-your system.
-
-Requirements: Windows + [Python 3.10+](https://www.python.org/downloads/)
-(tick **"Add Python to PATH"**). That's all — the built-in web UI ships
-inside the package, so **Node.js is not needed**.
-
-### ⌨️ Developers / Linux / macOS: clone + scripts
+Requires [Python 3.10+](https://www.python.org/downloads/) and Node 18+.
 
 ```bash
 git clone https://github.com/YiCQi/ZeroAIBench.git
 cd ZeroAIBench
 
 # Windows (PowerShell)
-scripts\setup.ps1         # one-time: venv + backend deps + web deps (~1 min)
-scripts\dev.ps1           # Vite dev UI on :5173 with hot-reload (needs Node 18+)
+scripts\setup.ps1         # one-time: private venv + dependencies
+scripts\dev.ps1           # workbench at http://localhost:5173, API at :8000
 
 # Linux / macOS
 ./scripts/setup.sh
 ./scripts/dev.sh
-./scripts/dev.sh
 ```
 
-That's it for the fast path — stylometry and plugin detectors are live out of
-the box; add `-Ml` (Windows) / `--with-ml` (Linux/macOS) to setup for the
-native-LM detectors (~2 GB: torch + GPT-2 family, then fully offline).
+* **Docker** (no Python/Node needed at all): `docker compose up`
+  → http://localhost:8000
+* **Local LM detectors** (LLM-Perplexity / Fast-DetectGPT / Binoculars /
+  HF-Classifier): rerun setup with `-Ml` (Windows) / `--with-ml`
+  (Linux/macOS). Adds torch + transformers (~2 GB); the small default models
+  (GPT-2 family) download on first analysis, then everything runs offline.
+  If the download is blocked, set `HF_ENDPOINT=https://hf-mirror.com` first.
+* Got `ModuleNotFoundError: fastapi`? You ran Python outside the venv — use
+  the dev script, or activate `apps/api/.venv` first.
 
-<details>
-<summary><b>What the scripts do</b> — the manual equivalent, if you prefer</summary>
+## Using the workbench
+
+Paste text in the **Workbench** tab, tick detectors, hit **Analyze**, then
+read the page top-to-bottom:
+
+1. **Consensus** — the calibration-weighted vote across detectors. When
+   detectors disagree, the notes say who said what; disagreement is
+   information, not a bug.
+2. **Detector cards** — every `score` is normalized so **higher = more
+   AI**, always. Raw values keep their native direction and each card
+   states it (e.g. *Binoculars: raw 6.4, lower = AI*).
+3. **Heatmap** — which *parts* of the text look AI, per sentence/paragraph.
+4. **Evidence chips** — the quotable numbers behind the verdict:
+   perplexity, burstiness, stock-phrase hits…
+
+The other tabs:
+
+* **Providers** — paste any OpenAI-compatible or Gemini key (DeepSeek,
+  OpenRouter, local Ollama — even keyless) to enable the **LLM Judge**.
+  Keys stay in the local `data/providers.json`, masked on screen.
+* **Calibration** — drop labeled samples into `data/bench/*.jsonl`
+  (`{"text": ..., "label": 1}` AI / `0` human) and hit **Recalibrate**:
+  each detector gets an honest AUC / accuracy, and consensus weights
+  follow measured quality.
+* **Methodology** — what each detector measures and what it is blind to.
+
+There is also a CLI with the same engine:
 
 ```bash
-# Backend (Python >= 3.10) — in a fresh venv of your own:
-cd apps/api
-pip install -e .                # fastapi + uvicorn + httpx + pydantic
-pip install -e ".[ml]"         # optional: torch + transformers
-python -m zeroaibench          # API on http://127.0.0.1:8000
-
-# Frontend (Node >= 18):
-cd apps/web
-npm install
-npm run dev                    # http://localhost:5173 (proxies /api -> 8000)
-```
-</details>
-
-**Docker** (no Python/Node needed at all; image builds the frontend for you
-and serves it on :8000):
-
-```bash
-docker compose up               # http://localhost:8000  (UI + API together)
-```
-
-Set `SLIM: "1"` in `docker-compose.yml` `build.args` for a ~200 MB image
-without the torch/transformers stack (Stylometry + plugins + BYOK Judge
-still work). Model caches and your provider keys live in the named volume.
-
-### Native LM detectors (optional, one command)
-
-LLM-Perplexity / Fast-DetectGPT / Binoculars / HF-Classifier need torch.
-Enable them (once):
-
-```powershell
-# Windows
-scripts\setup.ps1 -Ml          # + ~2 GB: torch + transformers
-```
-```bash
-# Linux / macOS
-./scripts/setup.sh --with-ml
-```
-
-First analysis then auto-downloads the GPT-2 family (~2 GB) and caches it
-— fully offline after that. Behind a restricted network, set
-`HF_ENDPOINT=https://hf-mirror.com` first (see Troubleshooting).
-
-### Using the workbench (the part no README usually tells you)
-
-The **Workbench tab** is 90% of your time: paste the text → tick detectors →
-**Analyze**. Then read the page top-to-bottom in this order:
-
-1. **Consensus** — the calibration-weighted vote across detectors, with an
-   explicit agreement level. If detectors disagree, the notes say *who said
-   what* — disagreement is information, not a bug.
-2. **Per-detector cards** — every `score` is normalized so **higher = more
-   AI**, always (`uncertain` is a verdict, not a failure). Raw values shown
-   under evidence can point the other way; each card states its direction,
-   e.g. *Binoculars: raw 6.4, lower = AI*.
-3. **Heatmap** — red ≈ AI-looking, blue ≈ human-lenient, per sentence or
-   paragraph. Answers "**which part** looks AI."
-4. **Evidence chips** — the numbers behind the verdict: perplexity 2.9,
-   burstiness 0.08, 11 stock-phrase hits… Answers "**why**." These are the
-   bits you can quote to a human.
-
-**Providers tab**: paste any OpenAI-compatible or Gemini API key (DeepSeek,
-OpenRouter, or a local Ollama — even keyless) to enable the **LLM Judge**
-detector. Keys stay in local `data/providers.json`, masked on screen.
-
-**Calibration tab**: one click fits honest score curves on a labeled corpus
-(try the bundled 24-sample `demo` first) — afterwards cards show their AUC /
-accuracy, and consensus weights follow calibrated quality automatically.
-Feed your own `data/bench/*.jsonl` whenever you have labeled text.
-
-**Methodology tab**: what each detector measures, what it's blind to.
-
-> Privacy: all detectors except the LLM Judge run **on your machine**; text,
-> history, keys never leave it. Turn off the Judge (or point it at local
-> Ollama/vLLM) and ZeroAIBench is fully offline.
-
-**CLI** (same engine, scriptable):
-
-```bash
-python -m zeroaibench.cli detectors
-python -m zeroaibench.cli analyze article.txt -d stylometry,lm_perplexity -o report.json
+python -m zeroaibench.cli analyze article.txt -d stylometry -o report.json
 python -m zeroaibench.cli calibrate -d stylometry --dataset demo
 ```
 
-### Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| `Python 3.10+ not found` from setup | Install Python 3.10+ from python.org (tick *Add to PATH*), or `winget install Python.Python.3.12`, or skip Python entirely with `docker compose up` |
-| `ModuleNotFoundError: fastapi` etc. | You ran `python -m zeroaibench` outside the venv. Use `scripts\dev.ps1`, or activate first: `apps\api\.venv\Scripts\activate` (Windows) / `source apps/api/.venv/bin/activate` (macOS/Linux) |
-| pip hangs / times out | Setup auto-retries via the Tsinghua mirror; to do it manually: `pip install -e . -i https://pypi.tuna.tsinghua.edu.cn/simple` |
-| npm install fails | `npm config set registry https://registry.npmmirror.com`, rerun setup |
-| GPT-2 model download (after `-Ml`) is blocked | `$env:HF_ENDPOINT = "https://hf-mirror.com"` (Windows) or `export HF_ENDPOINT=https://hf-mirror.com` (bash) before analyzing |
-| Port 8000 / 5173 already in use | Stop the other process, or `uvicorn zeroaibench.main:app --port 8001` + the Vite proxy line in `apps/web/vite.config.ts` |
+> Privacy: everything except the LLM Judge runs **on your machine** — text,
+> history and keys never leave it. Point the Judge at a local Ollama/vLLM
+> and ZeroAIBench is fully offline.
 
 ## The detector panel
 
@@ -179,28 +104,25 @@ python -m zeroaibench.cli calibrate -d stylometry --dataset demo
 | **Plugins** | community | anything | e.g. the bundled `length_rhythm` example (30 lines) |
 
 Every result shows normalized score, raw statistic (+ direction), verdict,
-threshold, signals, evidence items, per-sentence scores, runtime, and
-**calibration status** (or an honest error message).
+threshold, signals, evidence, and **calibration status** — or an honest
+error message.
 
 ## BYOK — your keys, your machine
 
-Providers are configured in the UI (Providers tab) or `data/providers.json`:
-OpenAI, Gemini, DeepSeek, OpenRouter, Groq, **local Ollama (no key)**, or any
-OpenAI-compatible endpoint (vLLM, LM Studio, …). Keys live only in that local
-file, are sent **only** to the endpoint you configure, and are never echoed
-back unmasked. Empty key ⇒ falls back to the provider's env var
-(`OPENAI_API_KEY`, `GEMINI_API_KEY`, …). See [docs/BYOK.md](docs/BYOK.md).
+OpenAI, Gemini, DeepSeek, OpenRouter, Groq, keyless local Ollama, or any
+OpenAI-compatible endpoint (vLLM, LM Studio, …). Keys live only in the
+local `data/providers.json`, are sent only to the endpoint you configure,
+never echoed back unmasked, and fall back to the provider's env var
+(`OPENAI_API_KEY`, `GEMINI_API_KEY`, …) when empty. Details:
+[docs/BYOK.md](docs/BYOK.md).
 
 ## Calibration — the honesty engine
 
-Out of the box detectors run on documented **default bands** and are visibly
-flagged `uncalibrated`. Drop labeled samples into `data/bench/*.jsonl`
-(`{"text": "...", "label": 1}` for AI / `0` for human) or use the built-in
-demo set, then hit **Recalibrate** (UI or
-`POST /api/calibration/run`). The backend fits a logistic map, chooses a
-max-accuracy threshold, and reports **AUC / accuracy / ECE / Brier** per
-detector. Consensus weights detectors by measured accuracy. The bundled
-demo set is a *demo* — calibrate on data from your own domain for real use.
+Out of the box, detectors run on documented **default bands** and are
+visibly flagged `uncalibrated`. Fit them on labeled data (UI button or
+`POST /api/calibration/run`) and each detector reports **AUC / accuracy /
+ECE / Brier** while consensus weights detectors by measured accuracy. The
+bundled demo set is a *demo* — calibrate on data from your own domain.
 
 ## Plugins — anyone can add a detector
 
@@ -235,9 +157,9 @@ and consensus treated identically to built-ins. Full contract:
 apps/api/zeroaibench/     FastAPI backend, detector registry, engine,
                           calibration, BYOK providers, CLI, bench corpus
 apps/web/                 React + Vite + TypeScript workbench UI
-plugins/                 bundled example plugins
-data/                    runtime state (history, keys, cache, fits) — local-only
-docs/                    architecture, detector API, BYOK, roadmap
+plugins/                  bundled example plugins
+data/                     runtime state (history, keys, cache, fits) — local-only
+docs/                     architecture, detector API, BYOK, roadmap
 tests are under apps/api/tests
 ```
 
@@ -245,56 +167,23 @@ tests are under apps/api/tests
 
 * **Adversarial text defeats detectors.** Rewritten, paraphrased or
   human-edited AI text and heavily-polished human text genuinely overlap.
-  ZeroAIBench surfaces evidence and let humans decide — it must not be used
-  as proof, or to accuse students/authors.
+  ZeroAIBench surfaces evidence and lets humans decide — it must not be
+  used as proof, or to accuse students/authors.
 * Local-LM detectors default to small English-centric models (`gpt2`); for
   Chinese/other languages point them at multilingual models (e.g.
   `Qwen2.5-0.5B`) via detector settings.
-* The bundled demo calibration set is small and hand-written for demo
-  purposes. It is not a benchmark.
-* Scores are probabilities only as far as their calibration says (that's why
-  calibration status is displayed everywhere).
+* Scores are probabilities only as far as their calibration says (that's
+  why calibration status is displayed everywhere).
 
-## Related open-source work (beyond the six built-ins)
+## Related open-source work
 
-ZeroAIBench is a workbench, not a silo — most of the ecosystem slots right
-in. Star counts checked 2026-10-03.
+Star counts checked 2026-10-03. Most of the ecosystem slots right in:
 
-**The methods we implement — original papers & code**
-
-| Repo | ★ | What it is |
-|---|---|---|
-| [baoguangsheng/fast-detect-gpt](https://github.com/baoguangsheng/fast-detect-gpt) | 434 | Fast-DetectGPT (ICLR'24) — our implementation's reference |
-| [ahans30/Binoculars](https://github.com/ahans30/Binoculars) | 421 | Binoculars (ICML'24) — likewise |
-| [HendrikStrobelt/detecting-fake-text](https://github.com/HendrikStrobelt/detecting-fake-text) | — | GLTR, the original token-rank coloring idea (on our roadmap) |
-
-**Drop-in BYOM models** (`hf_classifier.model` — paste the id, done)
-
-| Model | Where |
-|---|---|
-| `Hello-SimpleAI/chatgpt-detector-roberta` | HC3-era RoBERTa detector, general chat vs human |
-| `Hello-SimpleAI/chatgpt-detector-long` | long-form variant |
-| Academic-text BERT detectors (e.g. [Imalwayshere/Open-Detector](https://github.com/Imalwayshere/Open-Detector), 244★) | peer-review / scholarly text |
-
-| Other detectors worth knowing | ★ | Angle |
-|---|---|---|
-| [YuchuanTian/AIGC_text_detector](https://github.com/YuchuanTian/AIGC_text_detector) | 472 | MPU multiscale positive-unlabeled training (ICLR'24 spotlight) |
-| [lynote-ai/ai-text-detector](https://github.com/lynote-ai/ai-text-detector) | 445 | local, cautious/explainable risk analysis — kindred philosophy |
-| [ai-detected/ai-content-detectors](https://github.com/ai-detected/ai-content-detectors) | 166 | awesome-list of detectors, incl. online services |
-| [Jihuai-wpy/SeqXGPT](https://github.com/Jihuai-wpy/SeqXGPT) | 101 | **sentence-level** detection — same granularity as our heatmap |
-| [lyq9797/aigc_web](https://github.com/lyq9797/aigc_web) | 66 | Chinese fine-grained mixed-text detection |
-| [trieuntu/VietAIDetector](https://github.com/trieuntu/VietAIDetector) | 89 | a Binoculars port to Vietnamese — proof the method travels |
-
-**Evaluating honestly (feeds our calibration tab)**
-
-| Repo | ★ | What |
-|---|---|---|
-| [liamdugan/raid](https://github.com/liamdugan/raid) | 217 | RAID benchmark (ACL'24): 6M+ texts × 11 generators, adversarial cases — the corpus our Phase-2 "fair run harness" wants |
-| [martiansideofthemoon/ai-detection-paraphrases](https://github.com/martiansideofthemoon/ai-detection-paraphrases) | 205 | NeurIPS'23: paraphrase attacks beat single detectors — the documented reason this workbench shows disagreement instead of one score |
-
-And the other side of the arms race exists too (AI-humanizers with thousands
-of stars) — which is exactly why multi-detector evidence beats any single
-number.
+* [baoguangsheng/fast-detect-gpt](https://github.com/baoguangsheng/fast-detect-gpt) (434★) — the Fast-DetectGPT paper (ICLR'24), reference for our implementation. Likewise [ahans30/Binoculars](https://github.com/ahans30/Binoculars) (421★, ICML'24).
+* [Hello-SimpleAI](https://huggingface.co/Hello-SimpleAI) `chatgpt-detector-roberta` / `-long` — drop-in BYOM ids for the HF Classifier.
+* [YuchuanTian/AIGC_text_detector](https://github.com/YuchuanTian/AIGC_text_detector) (472★) — MPU multiscale detection (ICLR'24 spotlight).
+* [lynote-ai/ai-text-detector](https://github.com/lynote-ai/ai-text-detector) (445★) — local, cautious, explainable; kindred philosophy. Also [Jihuai-wpy/SeqXGPT](https://github.com/Jihuai-wpy/SeqXGPT) (101★, sentence-level like our heatmap) and [ai-detected/ai-content-detectors](https://github.com/ai-detected/ai-content-detectors) (166★, awesome-list).
+* [liamdugan/raid](https://github.com/liamdugan/raid) (217★) — big adversarial benchmark, a natural corpus for the Calibration tab; [martiansideofthemoon/ai-detection-paraphrases](https://github.com/martiansideofthemoon/ai-detection-paraphrases) (205★) — why paraphrase attacks make single scores unreliable, i.e. why this workbench shows disagreement.
 
 ## License
 
