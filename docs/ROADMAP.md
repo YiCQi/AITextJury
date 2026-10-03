@@ -75,6 +75,20 @@ Already in the box:
 *   **Per-detector model pinning in the UI.** Today Binoculars/Judge models
     are set in `settings.detectors`; expose them as first-class UI fields
     with "available on this machine" checks.
+*   **BYO scoring endpoint (off-box LM scoring).** Let the three probability
+    detectors (LM-Perplexity / Fast-DetectGPT / Binoculars) run against a
+    user-hosted vLLM/TGI-style server instead of local GPT-2:
+    `logprobs` + `echo` on a compat completions call makes scoring one HTTP
+    request, so laptops stay torch-free while a GPU box / NAS / rented pod
+    does the math (a stronger scorer, e.g. Qwen-2.5 or Pythia, without
+    touching the user's laptop). Hard requirements: the endpoint must pin
+    model *and revision* — calibration fits are scorer-bound, and a silently
+    upgraded cloud model would quietly invalidate every fit. Deliberately
+    out of scope: commercial chat APIs (OpenAI/DeepSeek/Gemini) cannot serve
+    these detectors even in principle — the methods need white-box access
+    (echoed prompt logprobs / per-position conditional sampling), which
+    black-box APIs don't expose; approximations via generated-token top-5
+    logprobs are censored and would deform the methods into noise.
 *   **Language-specific calibration curves.** Separate fits for zh/en
     instead of one pooled curve — corpus samples can already declare
     `language` explicitly (with per-sample auto-detection as fallback);
