@@ -42,18 +42,19 @@ anyone can write a detector plugin, plug it in, and compare methods openly.
 
 ### 🖱️ No-code (Windows): download → double-click
 
-You never touch a terminal. Nothing is installed into your system.
+You never touch a terminal. Nothing is installed into your system. The
+root folder has four double-click helpers:
 
-1. On the GitHub repo page click **Code → Download ZIP**, unzip anywhere
-   (or `git clone` if you have git).
-2. Inside the folder, double-click **`安装环境.bat`** — once, ever (~1–3 min:
-   it creates a private environment; your existing Python/conda is untouched).
-3. From now on, double-click **`启动工作台.bat`** any time → your browser
-   opens **http://localhost:8000**.
-   - The black window that appears **is** the tool: keep it open while using,
-     close it to stop.
-   - For Binoculars / Fast-DetectGPT / LLM-Perplexity, one extra line in a
-     terminal once — see *Native LM detectors* below.
+| Double-click | What it does |
+|---|---|
+| **`安装环境.bat`** | first-time only (~1–3 min): creates a private environment — your existing Python/conda untouched |
+| **`启动工作台.bat`** | any time: starts the workbench, browser opens **http://localhost:8000**. The black window *is* the tool: keep it open while using, close it to stop |
+| **`安装本地模型检测器.bat`** | *optional, once*: unlocks LLM-Perplexity / Fast-DetectGPT / Binoculars (~2–3 GB, then auto-runs a demo calibration) |
+| **`创建桌面快捷方式.bat`** | *optional, once*: puts a “ZeroAIBench 工作台” icon on your desktop |
+
+So the whole journey is: **Download ZIP → unzip → double-click 1 → from now
+on double-click 2.** Uninstalling = deleting the folder. Nothing is left in
+your system.
 
 Requirements: Windows + [Python 3.10+](https://www.python.org/downloads/)
 (tick **"Add Python to PATH"**). That's all — the built-in web UI ships
@@ -181,12 +182,17 @@ python -m zeroaibench.cli calibrate -d stylometry --dataset demo
 
 **零基础用户（Windows，全程不碰命令行）：**
 
-1. 项目主页点 **Code → Download ZIP**，解压到任意位置
-2. 双击 **`安装环境.bat`**（只需一次，约 1–3 分钟，自动创建隔离环境，不碰你电脑上的任何其他 Python）
-3. 以后每次用：双击 **`启动工作台.bat`** → 浏览器自动打开 http://localhost:8000
-   - 弹出的黑窗口就是程序本体：使用期间**保持开着**，关掉窗口就是退出
-4. 想加 Binoculars / Fast-DetectGPT / LLM-Perplexity？在终端里跑一次
-   `scripts\setup.ps1 -Ml`（见上面 *Native LM detectors*）
+根目录放了 4 个双击即用的文件：
+
+| 双击 | 作用 |
+|---|---|
+| **`安装环境.bat`** | 只需一次（1–3 分钟）：自动创建隔离环境，不碰电脑上任何其他 Python/conda |
+| **`启动工作台.bat`** | 每次使用：浏览器自动打开 http://localhost:8000；黑窗口就是程序本体——开着=运行，关闭=退出 |
+| **`安装本地模型检测器.bat`** | 可选、一次：解锁 LLM-Perplexity / Fast-DetectGPT / Binoculars 三个检测器（约 2–3 GB，装完自动跑示例校准） |
+| **`创建桌面快捷方式.bat`** | 可选、一次：在桌面放一个“ZeroAIBench 工作台”图标 |
+
+完整旅程 = **下载 ZIP → 解压 → 双击第 1 个 → 以后双击第 2 个**。
+卸载 = 直接删除文件夹，系统零残留。
 
 （前提：装好 Python 3.10+，安装时勾选 **"Add Python to PATH"**。不需要 Node。）
 
@@ -304,6 +310,47 @@ tests are under apps/api/tests
   purposes. It is not a benchmark.
 * Scores are probabilities only as far as their calibration says (that's why
   calibration status is displayed everywhere).
+
+## Related open-source work (beyond the six built-ins)
+
+ZeroAIBench is a workbench, not a silo — most of the ecosystem slots right
+in. Star counts checked 2026-10-03.
+
+**The methods we implement — original papers & code**
+
+| Repo | ★ | What it is |
+|---|---|---|
+| [baoguangsheng/fast-detect-gpt](https://github.com/baoguangsheng/fast-detect-gpt) | 434 | Fast-DetectGPT (ICLR'24) — our implementation's reference |
+| [ahans30/Binoculars](https://github.com/ahans30/Binoculars) | 421 | Binoculars (ICML'24) — likewise |
+| [HendrikStrobelt/detecting-fake-text](https://github.com/HendrikStrobelt/detecting-fake-text) | — | GLTR, the original token-rank coloring idea (on our roadmap) |
+
+**Drop-in BYOM models** (`hf_classifier.model` — paste the id, done)
+
+| Model | Where |
+|---|---|
+| `Hello-SimpleAI/chatgpt-detector-roberta` | HC3-era RoBERTa detector, general chat vs human |
+| `Hello-SimpleAI/chatgpt-detector-long` | long-form variant |
+| Academic-text BERT detectors (e.g. [Imalwayshere/Open-Detector](https://github.com/Imalwayshere/Open-Detector), 244★) | peer-review / scholarly text |
+
+| Other detectors worth knowing | ★ | Angle |
+|---|---|---|
+| [YuchuanTian/AIGC_text_detector](https://github.com/YuchuanTian/AIGC_text_detector) | 472 | MPU multiscale positive-unlabeled training (ICLR'24 spotlight) |
+| [lynote-ai/ai-text-detector](https://github.com/lynote-ai/ai-text-detector) | 445 | local, cautious/explainable risk analysis — kindred philosophy |
+| [ai-detected/ai-content-detectors](https://github.com/ai-detected/ai-content-detectors) | 166 | awesome-list of detectors, incl. online services |
+| [Jihuai-wpy/SeqXGPT](https://github.com/Jihuai-wpy/SeqXGPT) | 101 | **sentence-level** detection — same granularity as our heatmap |
+| [lyq9797/aigc_web](https://github.com/lyq9797/aigc_web) | 66 | Chinese fine-grained mixed-text detection |
+| [trieuntu/VietAIDetector](https://github.com/trieuntu/VietAIDetector) | 89 | a Binoculars port to Vietnamese — proof the method travels |
+
+**Evaluating honestly (feeds our calibration tab)**
+
+| Repo | ★ | What |
+|---|---|---|
+| [liamdugan/raid](https://github.com/liamdugan/raid) | 217 | RAID benchmark (ACL'24): 6M+ texts × 11 generators, adversarial cases — the corpus our Phase-2 "fair run harness" wants |
+| [martiansideofthemoon/ai-detection-paraphrases](https://github.com/martiansideofthemoon/ai-detection-paraphrases) | 205 | NeurIPS'23: paraphrase attacks beat single detectors — the documented reason this workbench shows disagreement instead of one score |
+
+And the other side of the arms race exists too (AI-humanizers with thousands
+of stars) — which is exactly why multi-detector evidence beats any single
+number.
 
 ## License
 
