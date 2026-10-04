@@ -12,6 +12,7 @@ import json
 import os
 import threading
 from pathlib import Path
+from uuid import uuid4
 
 from .. import config as cfg
 from . import build_provider, BaseProvider
@@ -59,12 +60,46 @@ class ProviderManager:
         assert self._providers is not None
         return list(self._providers)
 
+    def _auto_id(self, cfg_dict: dict, hint: str = "") -> str:
+        """Auto-generate a provider id so users never have to invent one.
+
+        Precedence: the picked template chip, an exact base_url match against
+        the built-in templates, or a slug from the base_url host. The id
+        keeps the '<name>[:N]' shape so the colon-prefix template convention
+        (env-var fallback etc.) keeps working.
+        """
+        url = (cfg_dict.get("base_url") or "").strip().lower().rstrip("/")
+        base = hint if hint in self.templates else ""
+        if not base and url:
+            for name, t in self.templates.items():
+                if (t.get("base_url") or "").strip().lower().rstrip("/") == url:
+                    base = name
+                    break
+        if not base:
+            host = url.split("//")[-1].split("/")[0].split(":")[0] if url else ""
+            if host in ("", "localhost", "127.0.0.1", "0.0.0.0", "::1"):
+                base = "custom"
+            else:
+                labels = host.split(".")
+                if labels[0] in ("api", "www") and len(labels) > 2:
+                    labels = labels[1:]
+                base = "".join(ch for ch in labels[0].lower() if ch.isalnum()) or "custom"
+        taken = {p.get("id") for p in self._providers}
+        if base not in taken:
+            return base
+        for i in range(2, 100):
+            cand = f"{base}:{i}"
+            if cand not in taken:
+                return cand
+        return f"{base}:{uuid4().hex[:6]}"
+
     def upsert(self, cfg_dict: dict) -> dict:
         assert self._providers is not None
+        hint = (cfg_dict.pop("template", "") or "").strip().lower()
         pid = cfg_dict.get("id", "").strip()
         if not pid:
-            raise ValueError("provider id required")
-        cfg_dict["id"] = pid
+            pid = self._auto_id(cfg_dict, hint)
+            cfg_dict["id"] = pid
         existing = [p for p in self._providers if p["id"] == pid]
         for cleaned in ("api_key", "base_url", "note"):
             cfg_dict.setdefault(cleaned, "")

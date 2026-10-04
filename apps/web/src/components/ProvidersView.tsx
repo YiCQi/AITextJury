@@ -3,13 +3,13 @@ import { deleteProvider, fetchKeys, saveProvider, testProvider } from "../api";
 import type { PublicProvider, ProviderTemplate } from "../types";
 
 type Draft = {
-  id: string; kind: string; base_url: string; api_key: string;
-  default_model: string; note: string;
+  kind: string; base_url: string; api_key: string;
+  default_model: string; note: string; template: string;
 };
 
 const BLANK: Draft = {
-  id: "", kind: "openai_compatible", base_url: "",
-  api_key: "", default_model: "", note: "",
+  kind: "openai_compatible", base_url: "",
+  api_key: "", default_model: "", note: "", template: "",
 };
 
 /**
@@ -22,6 +22,7 @@ export function ProvidersView() {
   const [templates, setTemplates] = useState<Record<string, ProviderTemplate>>({});
   const [storage, setStorage] = useState("");
   const [draft, setDraft] = useState<Draft>(BLANK);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tests, setTests] = useState<Record<string, { ok: boolean; detail: string; latency_ms: number }>>({});
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -40,31 +41,45 @@ export function ProvidersView() {
     if (!t) return;
     setDraft({
       ...draft,
-      id: name,
+      template: name,
       kind: t.kind,
       base_url: t.base_url,
       default_model: t.default_model,
     });
   };
 
-  const save = async (id: string) => {
+  const save = async () => {
     setBusy(true);
     setFeedback(null);
     try {
-      // only send api_key if non-empty — empty means “keep existing”
-      await saveProvider({
-        id, kind: draft.kind, base_url: draft.base_url,
+      // only send api_key if non-empty — empty means “keep existing”.
+      // no id = new entry; the server generates one from the preset.
+      const r = await saveProvider({
+        id: editingId ?? undefined,
+        kind: draft.kind, base_url: draft.base_url,
         api_key: draft.api_key || undefined,
         default_model: draft.default_model, note: draft.note,
+        template: editingId ? undefined : (draft.template || undefined),
       });
       setDraft(BLANK);
+      setEditingId(null);
       await refresh();
-      setFeedback(`saved “${id}” — its key now lives (only) in ${storage}`);
+      const label = r.id ?? editingId ?? "provider";
+      setFeedback(`saved “${label}” — its key now lives (only) in ${storage}`);
     } catch (e) {
       setFeedback(String(e));
     } finally {
       setBusy(false);
     }
+  };
+
+  const startEdit = (p: PublicProvider) => {
+    setEditingId(p.id);
+    setDraft({
+      kind: p.kind, base_url: p.base_url, api_key: "",
+      default_model: p.default_model, note: p.note, template: "",
+    });
+    setFeedback(`editing “${p.id}” — leave the key empty to keep it`);
   };
 
   const doTest = async (id: string) => {
@@ -97,8 +112,6 @@ export function ProvidersView() {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 10 }}>
-          <input placeholder="id (e.g. deepseek:fast)" value={draft.id}
-            onChange={(e) => setDraft({ ...draft, id: e.target.value })} />
           <select value={draft.kind}
             onChange={(e) => setDraft({ ...draft, kind: e.target.value })}>
             <option value="openai_compatible">openai-compatible</option>
@@ -111,16 +124,22 @@ export function ProvidersView() {
             onChange={(e) => setDraft({ ...draft, default_model: e.target.value })} />
           <input placeholder="API key (empty = keep existing / env)"
             value={draft.api_key} type="password"
-            onKeyDown={(e) => { if (e.key === "Enter" && draft.id) void save(draft.id); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && draft.base_url.trim()) void save(); }}
             onChange={(e) => setDraft({ ...draft, api_key: e.target.value })} />
-          <input placeholder="note (optional)" value={draft.note}
+          <input placeholder="note — your label for it (optional)" value={draft.note}
             onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
         </div>
         <div style={{ marginTop: 10 }}>
-          <button className="primary" disabled={busy || !draft.id.trim()}
-            onClick={() => void save(draft.id.trim())}>
-            {busy ? "saving…" : `Save provider “${draft.id || "…"}”`}
+          <button className="primary" disabled={busy || !draft.base_url.trim()}
+            onClick={() => void save()}>
+            {busy ? "saving…" : editingId ? `save “${editingId}”` : "add provider"}
           </button>
+          {editingId && (
+            <button className="ghost" style={{ marginLeft: 8, padding: "2px 9px", fontSize: 12 }}
+              onClick={() => { setEditingId(null); setDraft(BLANK); setFeedback(null); }}>
+              cancel (new entry)
+            </button>
+          )}
           {feedback && (
             <span style={{ marginLeft: 12, fontSize: 12.5, color: "var(--warn)" }}>
               {feedback}
@@ -128,9 +147,12 @@ export function ProvidersView() {
           )}
         </div>
         <p className="hint" style={{ marginTop: 8 }}>
-          Env fallback: leaving the key empty makes the provider read its
-          template env var (<code>OPENAI_API_KEY</code>, <code>GEMINI_API_KEY</code>,
-          <code> DEEPSEEK_API_KEY</code>…).
+          The provider id is generated for you from the preset you picked
+          (<code>deepseek</code>, then <code>deepseek:2</code>…) — the note
+          is the label you see. Env fallback: leaving the key empty makes the
+          provider read its template env var (
+          <code>OPENAI_API_KEY</code>, <code>GEMINI_API_KEY</code>,
+          <code>DEEPSEEK_API_KEY</code>…).
         </p>
       </div>
 
@@ -138,7 +160,7 @@ export function ProvidersView() {
         <h3>Configured providers</h3>
         <table className="flat">
           <thead>
-            <tr><th>id</th><th>kind</th><th>base URL</th><th>model</th>
+            <tr><th>provider</th><th>kind</th><th>base URL</th><th>model</th>
                 <th>key</th><th>connection</th><th></th></tr>
           </thead>
           <tbody>
@@ -146,7 +168,7 @@ export function ProvidersView() {
               const t = tests[p.id];
               return (
                 <tr key={p.id}>
-                  <td><b>{p.id}</b>{p.note ? <span style={{ color: "var(--text-faint)" }}> · {p.note}</span> : null}</td>
+                  <td><b>{p.note || p.id}</b>{p.note ? <span style={{ color: "var(--text-faint)" }}> · {p.id}</span> : null}</td>
                   <td className="num">{p.kind}</td>
                   <td className="num" style={{ fontSize: 12 }}>{p.base_url}</td>
                   <td className="num" style={{ fontSize: 12 }}>{p.default_model}</td>
@@ -165,6 +187,8 @@ export function ProvidersView() {
                   <td style={{ whiteSpace: "nowrap" }}>
                     <button className="ghost" style={{ padding: "2px 9px", fontSize: 12, marginRight: 6 }}
                       onClick={() => void doTest(p.id)}>test</button>
+                    <button className="ghost" style={{ padding: "2px 9px", fontSize: 12, marginRight: 6 }}
+                      onClick={() => startEdit(p)}>edit</button>
                     <button className="ghost" style={{ padding: "2px 9px", fontSize: 12 }}
                       onClick={async () => {
                         await deleteProvider(p.id);

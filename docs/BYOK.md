@@ -26,26 +26,31 @@ key involved.
 
 ## Configuring a provider
 
-Easiest: the **Providers** tab in the web UI — pick a template, paste the
-key, `POST /api/keys/{id}/test` runs a cheap auth check before you save
-anything.
+Easiest: the **Providers** tab in the web UI — pick a preset chip, paste
+the key, and you're done. You never invent an id: it is generated from the
+preset you picked (`deepseek`, and `deepseek:2` for a second entry of the
+same preset); the **note** is the human label the UI shows. `test` runs a
+cheap auth check, `edit` loads an entry back into the form (leave the key
+empty to keep it).
 
 Programmatically, `PUT /api/keys` with:
 
 ```json
 {
-  "id": "openai:work",
   "kind": "openai_compatible",
-  "base_url": "https://api.openai.com/v1",
-  "default_model": "gpt-4o-mini",
+  "base_url": "https://api.deepseek.com/v1",
+  "default_model": "deepseek-chat",
   "api_key": "sk-…",
-  "enabled": true,
-  "note": "work account"
+  "note": "my deepseek wallet"
 }
 ```
 
-* `id` — anything unique. The part before `:` links it to a template for
-  defaults (`openai:work` inherits OpenAI's base URL, model hint and env var).
+* `id` — **optional**. Empty id = a new entry whose id is auto-generated
+  (from the `template` hint the UI sends, else the base_url, else the host;
+  suffixed `:2`, `:3` … when taken). You can still set one explicitly; the
+  part before `:` links it to a template for defaults
+  (`openai:work` inherits OpenAI's base URL, model hint and env var).
+  An explicit id is also how you **update** an existing entry.
 * `api_key` may be **empty** — see env fallback below. On update (same `id`),
   an empty key means *"keep the existing one"*; the frontend relies on this
   and never echoes keys back.

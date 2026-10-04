@@ -157,13 +157,14 @@ class HistoryEntry(BaseModel):
 # ------------------------------------------------------------- providers ----
 
 class ProviderConfig(BaseModel):
-    id: str
+    id: str = ""               # optional; auto-generated from the template when empty
     kind: str = "openai_compatible"
     base_url: str = ""
     api_key: str = ""            # stored locally, never echoed back in full
     default_model: str = ""
     enabled: bool = True
-    note: str = ""
+    note: str = ""               # the human label (the part users actually type)
+    template: str = ""           # hint: which built-in preset was picked (drives the auto id)
 
 
 class PublicProvider(BaseModel):

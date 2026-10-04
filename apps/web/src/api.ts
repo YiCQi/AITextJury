@@ -74,9 +74,13 @@ export const analyze = (text: string, detector_ids: string[] | null,
     { text, detector_ids, force_refresh });
 
 export const saveProvider = (p: {
-  id: string; kind: string; base_url: string; api_key?: string;
+  /** optional - set only when editing an existing entry; empty = auto id */
+  id?: string;
+  kind: string; base_url: string; api_key?: string;
   default_model: string; enabled?: boolean; note?: string;
-}) => sendJSON<{ providers: PublicProvider[] }>("PUT", "/keys", p);
+  /** which preset chip was picked - drives the auto-generated id */
+  template?: string;
+}) => sendJSON<{ id?: string; providers: PublicProvider[] }>("PUT", "/keys", p);
 
 export const deleteProvider = (id: string) =>
   sendJSON<{ providers: PublicProvider[] }>("DELETE", `/keys/${id}`);

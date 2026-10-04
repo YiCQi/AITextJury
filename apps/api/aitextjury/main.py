@@ -194,12 +194,12 @@ def build_app(world: World | None = None) -> FastAPI:
         try:
             data = body.model_dump()
             data = {k: v for k, v in data.items() if k not in ("key_mask", "has_key")}
-            w.providers.upsert(data)
+            saved = w.providers.upsert(data)
         except ValueError as e:
             raise HTTPException(422, detail=str(e))
         except Exception as e:
             raise HTTPException(500, detail=f"{type(e).__name__}: {e}")
-        return {"providers": w.providers.public_view()}
+        return {"id": saved.get("id", ""), "providers": w.providers.public_view()}
 
     @app.delete("/api/keys/{pid}")
     def keys_delete(pid: str):

@@ -96,6 +96,41 @@ def test_provider_crud_and_masking(client):
     assert client.delete("/api/keys/openai").status_code == 200
 
 
+def test_provider_auto_id(client):
+    """Empty id = the server generates one (users never invent ids)."""
+
+    def put(**kw):
+        return client.put("/api/keys", json=kw).json()
+
+    # 1. from the picked template chip
+    r = put(kind="openai_compatible", base_url="https://api.deepseek.com/v1",
+            api_key="sk-ds", default_model="deepseek-chat", template="deepseek")
+    assert r["id"] == "deepseek"
+    # note is the label the UI shows; id is the internal key
+    assert r["providers"][0]["note"] == ""
+
+    # 2. second entry of the same template -> suffixed, prefix kept (env fallback)
+    r = put(kind="openai_compatible", base_url="https://api.deepseek.com/v1",
+            api_key="sk-ds2", default_model="deepseek-reasoner",
+            note="slow brain")
+    assert r["id"] == "deepseek:2"
+    labeled = [p for p in r["providers"] if p["id"] == "deepseek:2"]
+    assert labeled and labeled[0]["note"] == "slow brain"
+
+    # 3. no template hint at all -> base_url match
+    r = put(kind="openai_compatible", base_url="https://api.groq.com/openai/v1",
+            api_key="gsk_x", default_model="llama-3.1-8b-instant")
+    assert r["id"] == "groq"
+
+    # 4. unknown endpoint -> slug from the host
+    r = put(kind="openai_compatible", base_url="http://localhost:1234/v1",
+            api_key="local", default_model="whatever")
+    assert r["id"] == "custom"
+
+    ids = [p["id"] for p in client.get("/api/keys").json()["providers"]]
+    assert ids == ["deepseek", "deepseek:2", "groq", "custom"]
+
+
 def test_calibration_endpoints(client):
     r = client.get("/api/calibration")
     assert r.status_code == 200
