@@ -219,6 +219,11 @@ function DetectorPanel({ detectors, selected, onToggle }:
                 <div style={{ color: "var(--text-dim)", fontSize: 12.5, marginTop: 3 }}>
                   {d.available ? d.description : d.reason}
                 </div>
+                {!d.available && d.hints.length > 0 && (
+                  <div style={{ color: "var(--text-faint)", fontSize: 11.5, marginTop: 3 }}>
+                    {d.hints.join(" · ")}
+                  </div>
+                )}
                 {d.available && d.uncalibrated && (
                   <div style={{ color: "var(--text-faint)", fontSize: 11.5, marginTop: 3 }}
                        title={d.bands_help}>

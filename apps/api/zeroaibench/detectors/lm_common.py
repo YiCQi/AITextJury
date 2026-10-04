@@ -36,7 +36,9 @@ def ml_status() -> tuple[bool, str]:
 
 
 def ml_requirement_hint() -> str:
-    return "pip install \"zeroaibench[ml]\"  (torch + transformers)"
+    return ('rerun setup with -Ml: scripts\\setup.ps1 -Ml (Windows) / '
+            './scripts/setup.sh --with-ml (Linux/macOS) - or: pip install '
+            '"zeroaibench[ml]"')
 
 
 class ModelHub:

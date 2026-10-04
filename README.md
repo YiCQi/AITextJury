@@ -36,21 +36,22 @@ git clone https://github.com/YiCQi/ZeroAIBench.git
 cd ZeroAIBench
 
 # Windows (PowerShell)
-scripts\setup.ps1         # one-time: private venv + dependencies
+scripts\setup.ps1 -Ml     # one-time: private venv + all deps incl. torch
 scripts\dev.ps1           # workbench at http://localhost:5173, API at :8000
 
 # Linux / macOS
-./scripts/setup.sh
+./scripts/setup.sh --with-ml
 ./scripts/dev.sh
 ```
 
-* **Docker** (no Python/Node needed at all): `docker compose up`
-  → http://localhost:8000
-* **Local LM detectors** (LLM-Perplexity / Fast-DetectGPT / Binoculars /
-  HF-Classifier): rerun setup with `-Ml` (Windows) / `--with-ml`
-  (Linux/macOS). Adds torch + transformers (~2 GB); the small default models
-  (GPT-2 family) download on first analysis, then everything runs offline.
-  If the download is blocked, set `HF_ENDPOINT=https://hf-mirror.com` first.
+* **Why the flag**: without `-Ml` / `--with-ml` you get a light install (no
+  torch) and the four LM-based detectors stay `unavailable` — each shows the
+  fix command on its panel card. Re-running setup with the flag is safe
+  (the venv is reused). GPT-2-family weights (~0.5–2 GB) download on first
+  analysis; if HuggingFace is blocked, set `HF_ENDPOINT=https://hf-mirror.com`
+  first. After that everything runs offline.
+* **Docker** (no Python/Node needed, torch included):
+  `docker compose up` → http://localhost:8000
 * Got `ModuleNotFoundError: fastapi`? You ran Python outside the venv — use
   the dev script, or activate `apps/api/.venv` first.
 
