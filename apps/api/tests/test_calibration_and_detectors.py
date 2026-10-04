@@ -1,10 +1,10 @@
 import asyncio
 
-from zeroaibench.calibration import (CalibrationStore, all_corpora,
+from aitextjury.calibration import (CalibrationStore, all_corpora,
                                      apply_fit, logistic_fit, metrics)
-from zeroaibench.detectors.base import AnalysisContext
-from zeroaibench.detectors.stylometry import StylometryDetector
-from zeroaibench.segmenter import segment_text
+from aitextjury.detectors.base import AnalysisContext
+from aitextjury.detectors.stylometry import StylometryDetector
+from aitextjury.segmenter import segment_text
 
 AI_TEXT = (
     "In today's fast-paced digital landscape, businesses must leverage "

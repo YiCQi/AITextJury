@@ -100,7 +100,7 @@ export function Workbench() {
           <div className="panel" style={{ textAlign: "center", color: "var(--text-faint)" }}>
             <h3>Results</h3>
             <p style={{ minHeight: 120 }}>
-              No analysis yet. ZeroAIBench will show each detector's score
+              No analysis yet. AITextJury will show each detector's score
               <i> with its evidence</i> — heatmaps, surprisal, calibration
               status — not a single opaque percentage.
             </p>

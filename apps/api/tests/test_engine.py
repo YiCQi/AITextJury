@@ -2,10 +2,10 @@ import asyncio
 
 import pytest
 
-from zeroaibench.calibration import CalibrationStore
-from zeroaibench.detectors import build_default_registry
-from zeroaibench.engine import Engine
-from zeroaibench.providers.manager import ProviderManager
+from aitextjury.calibration import CalibrationStore
+from aitextjury.detectors import build_default_registry
+from aitextjury.engine import Engine
+from aitextjury.providers.manager import ProviderManager
 
 
 def make_engine(tmp_path):
@@ -85,7 +85,7 @@ def test_consensus_weights_and_notes(tmp_path):
 
 
 def test_history_saved_when_store_attached(tmp_path):
-    from zeroaibench.history import HistoryStore
+    from aitextjury.history import HistoryStore
     engine = make_engine(tmp_path)
     engine.history = HistoryStore(root=tmp_path / "hist", max_entries=5)
     text = "History should record this run. Second sentence right here."

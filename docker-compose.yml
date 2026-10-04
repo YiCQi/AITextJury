@@ -12,24 +12,24 @@
 # the UI live in the same volume (data/providers.json), never in the image.
 
 services:
-  zeroaibench:
+  aitextjury:
     # build with SLIM=1 in the build.args block below for the no-torch image
     build:
       context: .
       args:
         SLIM: "0"
-    image: zeroaibench:latest
+    image: aitextjury:latest
     ports:
       - "8000:8000"
     environment:
-      ZEROAIBENCH_HOME: /data
-      # Keys entered in the UI are stored under ZEROAIBENCH_HOME. To instead
+      AITEXTJURY_HOME: /data
+      # Keys entered in the UI are stored under AITEXTJURY_HOME. To instead
       # inject a key at start-up, uncomment — the UI then shows it masked:
       # OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
-      - zeroaibench_data:/data
+      - aitextjury_data:/data
     restart: unless-stopped
 
 volumes:
-  zeroaibench_data:
+  aitextjury_data:

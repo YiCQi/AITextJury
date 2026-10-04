@@ -1,4 +1,4 @@
-// Types mirroring apps/api/zeroaibench/schemas.py — keep in sync.
+// Types mirroring apps/api/aitextjury/schemas.py — keep in sync.
 
 export type Verdict = "likely_ai" | "likely_human" | "uncertain";
 

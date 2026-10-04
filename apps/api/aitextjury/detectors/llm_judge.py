@@ -29,7 +29,7 @@ from .base import AnalysisContext, BaseDetector, DetectorError, RawOutcome, \
 
 MAX_JUDGE_CHARS = 9000
 
-SYSTEM_PROMPT = """You are the LLM-Judge detector inside ZeroAIBench, an open
+SYSTEM_PROMPT = """You are the LLM-Judge detector inside AITextJury, an open
 workbench that collects *evidence* about whether text is AI-generated.
 You will see a numbered list of paragraphs from one document. Assess whether
 the writing looks machine-generated (LLM chat completions style) or
@@ -68,7 +68,7 @@ class LLMJudgeDetector(BaseDetector):
         "Your own LLM (OpenAI / Gemini / DeepSeek / OpenRouter / Ollama / any "
         "OpenAI-compatible API — BYOK) judges the text with structured "
         "verdict, per-paragraph suspicion flags and reasoning.")
-    link = "https://github.com/zeroaibench/zeroaibench/blob/main/docs/BYOK.md"
+    link = "https://github.com/YiCQi/AITextJury/blob/main/docs/BYOK.md"
     requires: list[str] = []
     default_enabled = False
     heavy = False

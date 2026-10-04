@@ -1,4 +1,4 @@
-# ZeroAIBench Roadmap
+# AITextJury Roadmap
 
 The project's [north star](../README.md): become the **VirusTotal for
 AI-generated text** — a neutral, open workbench where many detection
@@ -103,19 +103,19 @@ Already in the box:
     bundling torch makes it 2 GB+, startup unpacks 1–3 min every run, and
     antivirus false-positives are routine — the portable zip gets the same
     UX with none of those costs.
-*   **CLI-first workflows.** `zeroaibench analyze file.txt --json` and
+*   **CLI-first workflows.** `aitextjury analyze file.txt --json` and
     batch-mode calibration for CI pipelines (nightly eval corpora).
 *   **Browser extension** (post content from any page into local
     workbench) and a share-card export (text + heatmap + per-detector
     verdicts, no narrative spin).
-*   **Federation-lite.** An API-only mode where another ZeroAIBench node
+*   **Federation-lite.** An API-only mode where another AITextJury node
     can contribute detector results without sharing the raw text —
     digest-keyed, opt-in.
 
 ## Non-goals (written down so they stay non-goals)
 
 *   **No single "AI %" as the product.** The one-number AI-rate is the
-    failure mode of the current tool ecosystem; ZeroAIBench always surfaces
+    failure mode of the current tool ecosystem; AITextJury always surfaces
     per-detector scores, calibration quality, and disagreement.
 *   **No academic-authorship policing features.** No integrate-with-LMS,
     no "flag this student" UX, no auto-reporting. False positives at

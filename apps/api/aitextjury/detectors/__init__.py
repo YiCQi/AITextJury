@@ -87,7 +87,7 @@ class DetectorRegistry:
                 if py.name.startswith("_") or py.resolve() in seen:
                     continue
                 seen.add(py.resolve())
-                name = f"zeroaibench_plugin_{py.stem}"
+                name = f"aitextjury_plugin_{py.stem}"
                 try:
                     spec = importlib.util.spec_from_file_location(name, py)
                     mod = importlib.util.module_from_spec(spec)

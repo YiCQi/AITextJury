@@ -9,9 +9,9 @@ import asyncio
 
 import pytest
 
-from zeroaibench.detectors.base import AnalysisContext
-from zeroaibench.detectors.lm_common import HUB, tokenize_for_heatmap
-from zeroaibench.segmenter import segment_text
+from aitextjury.detectors.base import AnalysisContext
+from aitextjury.detectors.lm_common import HUB, tokenize_for_heatmap
+from aitextjury.segmenter import segment_text
 
 pytestmark = pytest.mark.ml
 
@@ -42,7 +42,7 @@ def test_tokenize_for_heatmap_offsets_are_absolute():
 
 
 def test_lm_perplexity_end_to_end():
-    from zeroaibench.detectors.lm_perplexity import LMPerplexityDetector
+    from aitextjury.detectors.lm_perplexity import LMPerplexityDetector
 
     outcome = asyncio.run(LMPerplexityDetector().analyze(_ctx(AI_TEXT)))
     assert outcome.raw_score is not None
@@ -55,7 +55,7 @@ def test_binoculars_signals_carry_model_metadata():
     """Binoculars tags signals with *model names* — the wire schema must
     accept non-numeric SignalValue (regression guard for the 422 we hit
     when fast_detect_gpt emitted {"model": "gpt2"})."""
-    from zeroaibench.detectors.binoculars import BinocularsDetector
+    from aitextjury.detectors.binoculars import BinocularsDetector
 
     outcome = asyncio.run(BinocularsDetector().analyze(_ctx(AI_TEXT)))
     assert outcome.raw_score is not None
@@ -65,7 +65,7 @@ def test_binoculars_signals_carry_model_metadata():
 
 
 def test_signal_value_schema_accepts_mixed_types():
-    from zeroaibench.schemas import DetectorResult
+    from aitextjury.schemas import DetectorResult
 
     res = DetectorResult(
         detector_id="t", name="t", family="stat",

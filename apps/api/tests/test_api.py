@@ -1,15 +1,15 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from zeroaibench import __version__
-from zeroaibench.main import World, build_app
-import zeroaibench.config as cfg
+from aitextjury import __version__
+from aitextjury.main import World, build_app
+import aitextjury.config as cfg
 
 
 def make_client(tmp_path):
     # point the data dir at a scratch area so tests never touch real data
     cfg.data_dir = lambda: tmp_path
-    import zeroaibench.providers.manager as pm
+    import aitextjury.providers.manager as pm
     world = World()
     world.providers.path = tmp_path / "providers.json"
     world.providers._providers = []

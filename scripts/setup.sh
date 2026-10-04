@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ZeroAIBench one-command setup (Linux / macOS).
+# AITextJury one-command setup (Linux / macOS).
 #
 #   ./scripts/setup.sh             core stack (~1 min)
 #   ./scripts/setup.sh --with-ml   + torch/transformers for the local-LM
@@ -11,7 +11,7 @@
 set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-PY="${ZEROAIBENCH_PYTHON:-python3}"
+PY="${AITEXTJURY_PYTHON:-python3}"
 command -v "$PY" >/dev/null 2>&1 || { echo "python3 not found. Install Python 3.10+ or use: docker compose up"; exit 1; }
 "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' \
     || { echo "Python 3.10+ required."; exit 1; }

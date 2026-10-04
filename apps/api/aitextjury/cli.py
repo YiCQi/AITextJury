@@ -1,8 +1,8 @@
-"""ZeroAIBench CLI.
+"""AITextJury CLI.
 
-  python -m zeroaibench.cli analyze report.txt -d stylometry,lm_perplexity
-  python -m zeroaibench.cli calibrate -d stylometry --dataset demo
-  python -m zeroaibench.cli detectors
+  python -m aitextjury.cli analyze report.txt -d stylometry,lm_perplexity
+  python -m aitextjury.cli calibrate -d stylometry --dataset demo
+  python -m aitextjury.cli detectors
 
 The CLI runs the same engine as the web UI — same detectors, same
 calibration store, same cache — so results are interchangeable.
@@ -51,7 +51,7 @@ def cmd_analyze(args) -> int:
         with open(args.out, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         print(f"report written to {args.out}")
-    print(f"\n— ZeroAIBench report {report.id} —")
+    print(f"\n— AITextJury report {report.id} —")
     for r in report.results:
         if r.error:
             print(f"  {r.detector_id:>22}  ERROR: {r.error}")
@@ -100,8 +100,8 @@ def cmd_calibrate(args) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="zeroaibench",
-        description="ZeroAIBench — open workbench for AI text detection. "
+        prog="aitextjury",
+        description="AITextJury — open workbench for AI text detection. "
                     "Evidence, not verdicts.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     sub = parser.add_subparsers(dest="cmd", required=True)

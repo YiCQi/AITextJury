@@ -3,13 +3,13 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "zeroaibench"
+name = "aitextjury"
 version = "0.1.0"
-description = "ZeroAIBench — an open workbench for AI-generated text detection. Evidence, not verdicts."
+description = "AITextJury — an open workbench for AI-generated text detection. Evidence, not verdicts."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "ZeroAIBench contributors" }]
+authors = [{ name = "AITextJury contributors" }]
 dependencies = [
     "fastapi>=0.110",
     "uvicorn>=0.29",
@@ -29,10 +29,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/zeroaibench/zeroaibench"
+Homepage = "https://github.com/YiCQi/AITextJury"
 
 [tool.setuptools.packages.find]
-include = ["zeroaibench*"]
+include = ["aitextjury*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

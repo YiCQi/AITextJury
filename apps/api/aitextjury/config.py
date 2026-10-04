@@ -3,7 +3,7 @@
 Everything user-generated (history, API keys, cache, calibration fits,
 plugin overrides) lives under a data directory whose location is:
 
-    1. $ZEROAIBENCH_HOME (explicit override)
+    1. $AITEXTJURY_HOME (explicit override)
     2. <repo>/data            (default in a dev checkout)
 
 BYOK keys never leave this machine except as auth headers toward the exact
@@ -15,9 +15,9 @@ import os
 import sys
 from pathlib import Path
 
-APP_NAME = "ZeroAIBench"
+APP_NAME = "AITextJury"
 VERSION = "0.1.0"
-API_PORT = int(os.environ.get("ZEROAIBENCH_PORT", "8000"))
+API_PORT = int(os.environ.get("AITEXTJURY_PORT", "8000"))
 
 
 def repo_root() -> Path:
@@ -30,7 +30,7 @@ def repo_root() -> Path:
 
 
 def data_dir() -> Path:
-    override = os.environ.get("ZEROAIBENCH_HOME")
+    override = os.environ.get("AITEXTJURY_HOME")
     base = Path(override) if override else repo_root() / "data"
     base.mkdir(parents=True, exist_ok=True)
     return base

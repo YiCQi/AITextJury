@@ -11,7 +11,7 @@
 └──────────────────────────────┬───────────────────────────────────────┘
                                │ /api/*
 ┌──────────────────────────────▼───────────────────────────────────────┐
-│ apps/api  zeroaibench (FastAPI)                                      │
+│ apps/api  aitextjury (FastAPI)                                      │
 │                                                                      │
 │  main.py    routes + World singleton (settings/registry/providers)  │
 │  engine.py  orchestration: segment once → run detectors in parallel   │

@@ -9,7 +9,7 @@ export function DocsView() {
         <h3>Why a workbench, not a single “AIometer”</h3>
         <p>
           Single-number AI detectors fail because they hide their evidence.
-          ZeroAIBench's core object is the <b>Detector API</b>: every method —
+          AITextJury's core object is the <b>Detector API</b>: every method —
           stylometry, local-LM surprisal, Fast-DetectGPT-style curvature,
           Binoculars-style cross-model agreement, HF classifiers, your own
           LLM-as-judge, community plugins — returns the same shape:

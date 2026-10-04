@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-  Start the ZeroAIBench workbench (backend + web UI) and open it in the browser.
+  Start the AITextJury workbench (backend + web UI) and open it in the browser.
 
 .DESCRIPTION
   Opens two PowerShell windows - one for the API (:8000), one for the Vite dev
@@ -30,7 +30,7 @@ if (-not (Test-Path (Join-Path $repo 'apps\web\node_modules'))) {
 
 Write-Host "Starting backend  -> http://localhost:8000  (window 1)" -ForegroundColor Cyan
 Start-Process powershell.exe -WorkingDirectory (Join-Path $repo 'apps\api') `
-    -ArgumentList '-NoExit', '-Command', '.venv\Scripts\python.exe -m zeroaibench'
+    -ArgumentList '-NoExit', '-Command', '.venv\Scripts\python.exe -m aitextjury'
 
 Write-Host "Starting web UI   -> http://localhost:5173  (window 2)" -ForegroundColor Cyan
 Start-Process powershell.exe -WorkingDirectory (Join-Path $repo 'apps\web') `

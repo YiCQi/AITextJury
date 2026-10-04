@@ -9,7 +9,7 @@ RUN npm run build
 # Python stage: install backend, copy the built frontend into static
 FROM python:3.11-slim AS api
 ENV PYTHONUNBUFFERED=1 \
-    ZEROAIBENCH_HOME=/data \
+    AITEXTJURY_HOME=/data \
     # NATIVE detector stack ON inside the image. It's ~2.5 GB.
     # Rebuild with `--build-arg SLIM=1` for the CPU-light version (no torch).
     PIP_NO_CACHE_DIR=1
@@ -23,10 +23,10 @@ RUN if [ "$SLIM" = "1" ]; then \
         pip install --upgrade pip && pip install ".[ml]" ; \
     fi
 
-COPY apps/api/zeroaibench ./zeroaibench
+COPY apps/api/aitextjury ./aitextjury
 COPY plugins/ ./plugins/
-COPY --from=web /web/dist ./zeroaibench/static
+COPY --from=web /web/dist ./aitextjury/static
 RUN mkdir -p /data
 
 EXPOSE 8000
-CMD ["python", "-m", "zeroaibench"]
+CMD ["python", "-m", "aitextjury"]

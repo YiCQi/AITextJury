@@ -1,4 +1,4 @@
-"""Example third-party plugin — demonstrates the ZeroAIBench plugin contract.
+"""Example third-party plugin — demonstrates the AITextJury plugin contract.
 
 A plugin is any Python file exposing:
 
@@ -15,9 +15,9 @@ from __future__ import annotations
 
 import math
 
-from zeroaibench.detectors.base import AnalysisContext, BaseDetector, \
+from aitextjury.detectors.base import AnalysisContext, BaseDetector, \
     DetectorError, RawOutcome, RawSegment
-from zeroaibench.schemas import Availability
+from aitextjury.schemas import Availability
 
 
 class LengthRhythmDetector(BaseDetector):
@@ -28,7 +28,7 @@ class LengthRhythmDetector(BaseDetector):
         "Example plugin: how rhythmically even the paragraph lengths are. "
         "Models that answer with template prose tend to emit blocks of "
         "very similar size; humans lurch. Deliberately single-feature.")
-    link = "https://github.com/zeroaibench/zeroaibench/blob/main/docs/DETECTOR_API.md"
+    link = "https://github.com/YiCQi/AITextJury/blob/main/docs/DETECTOR_API.md"
     requires: list[str] = []
     default_enabled = False
     DEFAULT_BANDS = (0.55, 0.18)

@@ -1,4 +1,4 @@
-from zeroaibench.segmenter import segment_text
+from aitextjury.segmenter import segment_text
 
 
 def test_paragraph_offsets_are_absolute():

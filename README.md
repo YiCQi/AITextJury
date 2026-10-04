@@ -1,19 +1,20 @@
-# ZeroAIBench
+# AITextJury
 
-**An open workbench for AI-generated text detection. Evidence, not verdicts.**
+**A jury of AI-text detectors. You are the judge.**
 
-ZeroAIBench is not "yet another AI detector" that prints one unreliable
-percentage. It is a **platform** where you paste text, run *many* independent
-detection methods side by side through one unified **Detector API**, and
-look at the underlying evidence — per-sentence heatmaps, surprisal,
-cross-model agreement, stylometric fingerprint, calibration quality — before
-forming any opinion. Think of it as a VirusTotal-style workbench for
-AI-generated text: anyone can write a detector plugin, plug it in, and
-compare methods openly.
+AITextJury is an open workbench for AI-generated text detection — not
+"yet another AI detector" that prints one unreliable percentage. Paste text,
+run *many* independent detection methods side by side through one unified
+**Detector API**, and look at the underlying evidence — per-sentence
+heatmaps, surprisal, cross-model agreement, stylometric fingerprint,
+calibration quality — before forming any opinion. Each detector is a juror
+that presents its evidence; the verdict is yours. Think of it as a
+VirusTotal-style workbench for AI-generated text: anyone can write a
+detector plugin, plug it in, and compare methods openly.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     ZeroAIBench Workbench                        │
+│                     AITextJury Workbench                        │
 │  text ─▶ segmenter ─▶ detectors (parallel, cached) ─▶ consensus │
 └───────────┬──────────────────────────────────────────────────────┘
             │
@@ -32,8 +33,8 @@ compare methods openly.
 Requires [Python 3.10+](https://www.python.org/downloads/) and Node 18+.
 
 ```bash
-git clone https://github.com/YiCQi/ZeroAIBench.git
-cd ZeroAIBench
+git clone https://github.com/YiCQi/AITextJury.git
+cd AITextJury
 
 # Windows (PowerShell)
 scripts\setup.ps1 -Ml     # one-time: private venv + all deps incl. torch
@@ -84,13 +85,13 @@ The other tabs:
 There is also a CLI with the same engine:
 
 ```bash
-python -m zeroaibench.cli analyze article.txt -d stylometry -o report.json
-python -m zeroaibench.cli calibrate -d stylometry --dataset demo
+python -m aitextjury.cli analyze article.txt -d stylometry -o report.json
+python -m aitextjury.cli calibrate -d stylometry --dataset demo
 ```
 
 > Privacy: everything except the LLM Judge runs **on your machine** — text,
 > history and keys never leave it. Point the Judge at a local Ollama/vLLM
-> and ZeroAIBench is fully offline.
+> and AITextJury is fully offline.
 
 ## The detector panel
 
@@ -129,8 +130,8 @@ bundled demo set is a *demo* — calibrate on data from your own domain.
 
 ```python
 # data/plugins/my_detector.py  (or plugins/ for bundled examples)
-from zeroaibench.detectors.base import BaseDetector, RawOutcome
-from zeroaibench.schemas import Availability
+from aitextjury.detectors.base import BaseDetector, RawOutcome
+from aitextjury.schemas import Availability
 
 class MyDetector(BaseDetector):
     id, name, family, description, DEFAULT_BANDS = ...  # see docs/DETECTOR_API.md
@@ -155,7 +156,7 @@ and consensus treated identically to built-ins. Full contract:
 ## Repository layout
 
 ```
-apps/api/zeroaibench/     FastAPI backend, detector registry, engine,
+apps/api/aitextjury/     FastAPI backend, detector registry, engine,
                           calibration, BYOK providers, CLI, bench corpus
 apps/web/                 React + Vite + TypeScript workbench UI
 plugins/                  bundled example plugins
@@ -168,7 +169,7 @@ tests are under apps/api/tests
 
 * **Adversarial text defeats detectors.** Rewritten, paraphrased or
   human-edited AI text and heavily-polished human text genuinely overlap.
-  ZeroAIBench surfaces evidence and lets humans decide — it must not be
+  AITextJury surfaces evidence and lets humans decide — it must not be
   used as proof, or to accuse students/authors.
 * Local-LM detectors default to small English-centric models (`gpt2`); for
   Chinese/other languages point them at multilingual models (e.g.

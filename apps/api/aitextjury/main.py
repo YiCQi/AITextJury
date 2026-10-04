@@ -318,7 +318,7 @@ def build_app(world: World | None = None) -> FastAPI:
         return str(cfg.data_dir() / "bench" / f"{name}.jsonl")
 
     # ------------------------------------------------- static UI (docker image)
-    # If a built frontend (apps/web/dist) was copied into zeroaibench/static
+    # If a built frontend (apps/web/dist) was copied into aitextjury/static
     # at image build time, serve it as a fallback for non-API GETs. The Vite
     # dev server (npm run dev) never hits this path during normal development.
     static_dir = Path(__file__).parent / "static"

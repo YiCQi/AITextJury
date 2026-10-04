@@ -1,7 +1,7 @@
 # The Detector API — write your own detector
 
 A detector is any Python class subclassing
-`zeroaibench.detectors.base.BaseDetector` plus a `register(registry)` hook
+`aitextjury.detectors.base.BaseDetector` plus a `register(registry)` hook
 function. Everything else — scheduling, timeouts, caching, normalization,
 verdicts, confidence, calibration, consensus, the UI — is handled by the
 platform. You implement exactly one thing: **turning text into evidence**.
@@ -17,9 +17,9 @@ Files starting with `_` are ignored. Load errors are collected and reported
 ## The contract
 
 ```python
-from zeroaibench.detectors.base import (
+from aitextjury.detectors.base import (
     AnalysisContext, BaseDetector, DetectorError, RawOutcome, RawSegment)
-from zeroaibench.schemas import Availability, EvidenceItem
+from aitextjury.schemas import Availability, EvidenceItem
 
 
 class MyStylometricThing(BaseDetector):
@@ -106,7 +106,7 @@ def register(registry):                 # ← called at startup
 7. **BYOK discipline.** Remote calls only via `ctx.providers`. Never invent
    env vars or store keys yourself.
 
-## Local-LM helper utilities (`zeroaibench.detectors.lm_common`)
+## Local-LM helper utilities (`aitextjury.detectors.lm_common`)
 
 If you build a torch/transformers detector, reuse:
 
@@ -126,9 +126,9 @@ See `detectors/lm_perplexity.py` (~100 lines) for the minimal pattern and
 ## Testing your plugin
 
 ```bash
-python -m zeroaibench.cli detectors           # availability + errors
-python -m zeroaibench.cli analyze t.txt -d my_thing
-python -m zeroaibench.cli calibrate -d my_thing --dataset demo
+python -m aitextjury.cli detectors           # availability + errors
+python -m aitextjury.cli analyze t.txt -d my_thing
+python -m aitextjury.cli calibrate -d my_thing --dataset demo
 ```
 
 The workbench treats your plugin exactly like a core detector: caching,

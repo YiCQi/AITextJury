@@ -1,13 +1,13 @@
 # BYOK — Bring Your Own Key
 
-ZeroAIBench's LLM-Judge detector (and anything else that needs a large
+AITextJury's LLM-Judge detector (and anything else that needs a large
 model — future detectors, summarizers) calls **your** provider with **your**
 key. There are no vendor SDKs in this project — provider adapters are plain
 [`httpx`](https://www.python-httpx.org/) — and there is exactly one place a
 key can be stored: `data/providers.json` on your own machine.
 
 ```
-ZeroAIBench ──(your key, httpx)──► provider you configured
+AITextJury ──(your key, httpx)──► provider you configured
                                           OpenAI / Gemini / DeepSeek /
                                           OpenRouter / Groq / Ollama /
                                           vLLM / LM Studio / one-api / …
@@ -63,7 +63,7 @@ So both of these work and can even coexist:
 
 ```bash
 export DEEPSEEK_API_KEY=sk-xxxx           # no UI step needed at all
-python -m zeroaibench
+python -m aitextjury
 ```
 
 | Template     | `env_key`          | `base_url`                                          | model hint |
@@ -81,7 +81,7 @@ compose:
 
 ```yaml
 environment:
-  ZEROAIBENCH_HOME: /data
+  AITEXTJURY_HOME: /data
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}
 ```
 
@@ -107,7 +107,7 @@ the host.)
 
 Only one built-in consumer today: the **LLM-Judge detector** (`llm_judge`).
 It sends the text under analysis plus a fixed, auditable system prompt
-(`apps/api/zeroaibench/detectors/llm_judge.py`) and requests strict JSON:
+(`apps/api/aitextjury/detectors/llm_judge.py`) and requests strict JSON:
 `{"verdict": "ai"|"human"|"mixed", "confidence": 0-100, "reason": "…",
 "flagged": ["…"]}`. It uses `temperature=0`, `json_mode` when the provider
 supports it, and honors `timeout_llm` (default 120 s) from settings.

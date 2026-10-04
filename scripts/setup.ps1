@@ -1,13 +1,13 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-  ZeroAIBench one-command setup (Windows).
+  AITextJury one-command setup (Windows).
 
 .DESCRIPTION
   Creates an isolated virtualenv under apps\api\.venv and installs the
   backend + (optionally) the native-LM detector stack. Your system / conda
   Python is never touched, so this cannot break any existing environment —
-  and a broken global environment cannot break ZeroAIBench.
+  and a broken global environment cannot break AITextJury.
 
   Idempotent: rerun any time; an existing venv is reused and deps refreshed.
 

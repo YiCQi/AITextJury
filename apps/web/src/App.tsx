@@ -47,7 +47,7 @@ export default function App() {
       </main>
 
       <footer className="pagefoot">
-        ZeroAIBench v0.1.0 · MIT license · detectors are evidence engines, not
+        AITextJury v0.1.0 · MIT license · detectors are evidence engines, not
         arbiters — adversarial or edited text can defeat any known method.
       </footer>
     </div>

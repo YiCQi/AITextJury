@@ -50,7 +50,7 @@ class StylometryDetector(BaseDetector):
         "Statistical linguistic fingerprint: burstiness, repetition profile, "
         "connective boilerplate, LLM-register tell phrases, punctuation "
         "habits. Zero dependencies, always available.")
-    link = "https://github.com/zeroaibench/zeroaibench/blob/main/docs/DETECTOR_API.md"
+    link = "https://github.com/YiCQi/AITextJury/blob/main/docs/DETECTOR_API.md"
     requires: list[str] = []
     default_enabled = True
     heavy = False

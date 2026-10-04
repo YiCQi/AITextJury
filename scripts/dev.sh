@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start the ZeroAIBench workbench (backend :8000 + web UI :5173).
+# Start the AITextJury workbench (backend :8000 + web UI :5173).
 # Prerequisite: ./scripts/setup.sh has run at least once.
 # Logs: data/dev-backend.log, data/dev-web.log   Stop: Ctrl-C (fg) or kill the PIDs printed below.
 
@@ -13,7 +13,7 @@ py="$repo/apps/api/.venv/bin/python"
 mkdir -p "$repo/data"
 
 echo "Starting backend  -> http://localhost:8000   (log: data/dev-backend.log)"
-(cd "$repo/apps/api" && exec "$py" -m zeroaibench) > "$repo/data/dev-backend.log" 2>&1 &
+(cd "$repo/apps/api" && exec "$py" -m aitextjury) > "$repo/data/dev-backend.log" 2>&1 &
 BACKEND_PID=$!
 echo "  backend pid: $BACKEND_PID"
 
