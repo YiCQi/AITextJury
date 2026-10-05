@@ -1,14 +1,27 @@
 import type { Verdict } from "./types";
 
-/** Color helpers shared by gauge + heatmap. */
+/**
+ * Color helpers shared by gauge + heatmap — theme-aware. Dark keeps the
+ * original luminous palette (colors sit on tinted dark backgrounds);
+ * light darkens the same hues for contrast on white. setDarkUI() is
+ * called by App on mount and on every theme toggle.
+ */
+const SCALE_DARK = ["#4fb3ff", "#6ba4b8", "#7d8698", "#b8845a", "#f0644c"];
+const SCALE_LIGHT = ["#1683cf", "#54798f", "#5c6c7e", "#a0620b", "#d4402b"];
+
+let darkUI = true;
+export const setDarkUI = (d: boolean) => { darkUI = d; };
+export const isDarkUI = () => darkUI;
+
+// 0 -> human blue, .5 -> neutral, 1 -> AI hot
 export function scoreColor(score: number | null | undefined): string {
+  const s = darkUI ? SCALE_DARK : SCALE_LIGHT;
   if (score == null) return "transparent";
-  // 0 -> human blue, .5 -> neutral, 1 -> AI hot
-  if (score <= 0.35) return "#4fb3ff";
-  if (score < 0.45) return "#6ba4b8";
-  if (score < 0.55) return "#7d8698";
-  if (score < 0.65) return "#b8845a";
-  return "#f0644c";
+  if (score <= 0.35) return s[0];
+  if (score < 0.45) return s[1];
+  if (score < 0.55) return s[2];
+  if (score < 0.65) return s[3];
+  return s[4];
 }
 
 export function verdictClass(v: Verdict | null | undefined): string {

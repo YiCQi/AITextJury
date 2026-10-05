@@ -200,7 +200,7 @@ function DetectorPanel({ detectors, selected, onToggle }:
               display: "flex", gap: 10, alignItems: "flex-start",
               padding: "9px 10px", borderRadius: 8,
               border: `1px solid ${on ? "var(--accent-dim)" : "var(--line-soft)"}`,
-              background: on ? "rgba(33,201,147,0.045)" : "transparent",
+              background: on ? "var(--accent-tint)" : "transparent",
               cursor: d.available ? "pointer" : "not-allowed",
               opacity: d.available ? 1 : 0.55,
             }}>

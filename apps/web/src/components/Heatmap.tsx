@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { AnalyzeReport, DetectorResult, SegmentScore } from "../types";
-import { scoreColor } from "../util";
+import { scoreColor, isDarkUI } from "../util";
 
 /**
  * Sentence-level heatmap over the original text.
@@ -102,8 +102,11 @@ export function Heatmap({ report }:{ report: AnalyzeReport }) {
           <span className="para" key={p.id}>
             {(byPara.get(p.id) ?? []).map((s) => {
               const v = active.scores.get(s.id);
+              // dark: tint the text's own color up to 0.85; light: cap at
+              // 0.32 so white backgrounds stay pastel and the text readable
+              const base = isDarkUI() ? 0.16 : 0.08;
               const bg = v != null
-                ? hexAlpha(scoreColor(v), 0.16 + Math.abs(v - 0.5) * 0.5)
+                ? hexAlpha(scoreColor(v), base + Math.abs(v - 0.5) * 0.5)
                 : "transparent";
               return (
                 <span
@@ -124,7 +127,7 @@ export function Heatmap({ report }:{ report: AnalyzeReport }) {
 
       {hover && (
         <div className="seg-tip" style={{ left: hover.x, top: hover.y }}>
-          <div style={{ color: "#8b9bb4", marginBottom: 6, fontSize: 11 }}>
+          <div style={{ color: "var(--text-dim)", marginBottom: 6, fontSize: 11 }}>
             segment scores · {hoverSegText(report, hover.segId)}
           </div>
           {(allBySeg.get(hover.segId) ?? []).map((row, i) => (
@@ -161,19 +164,20 @@ function tooltipExtras(report: AnalyzeReport, segId: string) {
   }
   if (!reasons.length) return null;
   return (
-    <div style={{ marginTop: 6, borderTop: "1px solid #1e2839", paddingTop: 6 }}>
+    <div style={{ marginTop: 6, borderTop: "1px solid var(--line)", paddingTop: 6 }}>
       {reasons.slice(0, 3).map((r, i) => (
-        <div key={i} style={{ color: "#f0a35c" }}>“{r}”</div>
+        <div key={i} style={{ color: "var(--warn)" }}>“{r}”</div>
       ))}
     </div>
   );
 }
 
-/** #rrggbb -> rgba with alpha */
+/** #rrggbb -> rgba with alpha (theme-aware saturation envelope) */
 function hexAlpha(hex: string, alpha: number): string {
   const h = hex.replace("#", "");
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${Math.max(0.06, Math.min(alpha, 0.85))})`;
+  const cap = isDarkUI() ? 0.85 : 0.32;
+  return `rgba(${r},${g},${b},${Math.max(0.06, Math.min(alpha, cap))})`;
 }

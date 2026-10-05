@@ -35,7 +35,8 @@ export function Gauge({ score, verdict, confidence, threshold = 0.5, size = 1 }:
     <div className="gauge" style={{ transform: `scale(${size})`, transformOrigin: "top left" }}>
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
         <path d={arcPath(start, track, R)}
-          stroke="#1c2636" strokeWidth="9" fill="none" strokeLinecap="round" />
+          strokeWidth="9" fill="none" strokeLinecap="round"
+          style={{ stroke: "var(--gauge-track)" }} />
         {score != null && (
           <>
             <path d={arcPath(start, ang, R)}
@@ -46,7 +47,8 @@ export function Gauge({ score, verdict, confidence, threshold = 0.5, size = 1 }:
               y1={pt(start + sweep * threshold, R - 7).split(",")[1]}
               x2={pt(start + sweep * threshold, R + 7).split(",")[0]}
               y2={pt(start + sweep * threshold, R + 7).split(",")[1]}
-              stroke="#5c6a80" strokeWidth="1.5" strokeDasharray="2 2" />
+              strokeWidth="1.5" strokeDasharray="2 2"
+              style={{ stroke: "var(--gauge-tick)" }} />
           </>
         )}
       </svg>

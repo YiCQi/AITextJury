@@ -1,23 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Workbench } from "./components/Workbench";
 import { HistoryView } from "./components/HistoryView";
 import { CalibrationView } from "./components/CalibrationView";
 import { ProvidersView } from "./components/ProvidersView";
 import { DocsView } from "./components/DocsView";
+import { setDarkUI } from "./util";
 
 type Tab = "workbench" | "history" | "calibration" | "providers" | "methods";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("workbench");
+  // index.html sets data-theme pre-mount (localStorage -> OS preference);
+  // React adopts that and flips it when toggled.
+  const [theme, setTheme] = useState(
+    document.documentElement.dataset.theme === "light" ? "light" : "dark",
+  );
+
+  useEffect(() => {
+    setDarkUI(theme === "dark");
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("theme", next); } catch { /* private mode */ }
+  };
 
   return (
     <div className="app">
       <header className="topbar">
         <div className="logo">
-          <span className="name">Zero<em>AI</em>Bench</span>
+          <span className="name">AI<em>Text</em>Jury</span>
           <span className="tag">
-            open workbench for AI text detection · evidence, not verdicts ·
-            BYOK
+            a jury of AI-text detectors · evidence, not verdicts · BYOK
           </span>
         </div>
         <nav className="tabs">
@@ -30,6 +46,11 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <button className="ghost theme-toggle"
+          title={theme === "dark" ? "switch to day mode" : "switch to night mode"}
+          onClick={toggleTheme}>
+          {theme === "dark" ? "☀ day" : "☾ night"}
+        </button>
       </header>
 
       <div className="masthead">
