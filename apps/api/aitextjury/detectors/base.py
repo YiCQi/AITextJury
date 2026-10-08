@@ -117,6 +117,7 @@ class BaseDetector(abc.ABC):
     requires: list[str] = []           # pip packages (informational)
     default_enabled: bool = True
     heavy: bool = False                # slower / downloads models
+    recommended: bool = False          # workbench shows a "recommended" badge
 
     # Default normalization bands used until a calibration fit exists.
     #   mid: raw value separating human|AI

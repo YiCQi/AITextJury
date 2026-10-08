@@ -96,6 +96,7 @@ class Engine:
                 "requires": det.requires,
                 "default_enabled": det.default_enabled,
                 "heavy": det.heavy,
+                "recommended": det.recommended,
                 "available": av.ok,
                 "reason": av.reason,
                 "hints": av.hints,

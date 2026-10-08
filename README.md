@@ -21,11 +21,11 @@ detector plugin, plug it in, and compare methods openly.
    ┌────────┴────────────────────────────────────────────┐
    │ Detector API  (every detector returns the same shape)│
    └────────┬────────────────────────────────────────────┘
-        ┌────┴─────┬─────────────┬────────────┬─────────────┐
-   stylometry  local-LM      classifier   LLM-Judge      your
-   (stats)   perplexity /   (BYOM, HF)   (BYOK: OpenAI, plugins
-             Fast-DetectGPT /          Gemini, DeepSeek, (plugins/)
-             Binoculars                Ollama, anything)
+      ┌─────┴────────────┬──────────────────┬────────────┬────────────┐
+   LLM-Judge          local-LM          classifier     stylometry   your
+   (BYOK: OpenAI,     perplexity /      (BYOM, HF)     (stats)      plugins
+   Gemini, DeepSeek,  Fast-DetectGPT /                              (plugins/)
+   Ollama, anything)  Binoculars
 ```
 
 ## Quickstart
@@ -95,14 +95,18 @@ python -m aitextjury.cli calibrate -d stylometry --dataset demo
 
 ## The detector panel
 
+Ranked by general judgment strength — strongest first. The **LLM Judge** leads
+and is **★ recommended**; after it, zero-shot LM methods beat in-domain
+classifiers, and soft statistical signals bring up the rear.
+
 | detector | type | needs | idea |
 |---|---|---|---|
-| **Stylometry** | local stats | nothing | burstiness, repetition profile, connective boilerplate, LLM-register "tells" (EN+ZH) |
-| **LLM Perplexity** | local LM | torch+transformers | mean per-token surprisal under a small causal LM (default gpt2, configurable) |
-| **Fast-DetectGPT** | local LM | torch+transformers | conditional probability curvature via contrastive perturbation ([Bao et al., ICLR'24](https://arxiv.org/abs/2310.05130)) — documented variant |
-| **Binoculars** | local LM pair | torch+transformers | performer/observer cross-model agreement ([Hans et al. 2024](https://arxiv.org/abs/2401.12070)) — documented closed form |
-| **HF Classifier** | BYOM | torch+transformers | any HuggingFace text-classification model you choose |
-| **LLM Judge** | BYOK | a provider key or local Ollama | your LLM judges with a strict-JSON protocol, flags paragraphs, explains |
+| **LLM Judge** ★ | BYOK · recommended | a provider key or local Ollama | your LLM judges with a strict-JSON protocol, flags paragraphs, explains — the strongest single juror |
+| **Fast-DetectGPT** | local LM | torch+transformers | conditional probability curvature via contrastive perturbation ([Bao et al., ICLR'24](https://arxiv.org/abs/2310.05130)) — the strongest zero-shot local method; documented variant |
+| **Binoculars** | local LM pair | torch+transformers | performer/observer cross-model agreement ([Hans et al. 2024](https://arxiv.org/abs/2401.12070)) — strong but threshold-sensitive; documented closed form |
+| **HF Classifier** | BYOM | torch+transformers | any HuggingFace text-classification model you choose — strong in-domain, transfers poorly across domains |
+| **LLM Perplexity** | local LM | torch+transformers | mean per-token surprisal under a small causal LM (default gpt2, configurable) — a soft signal, best as corroboration |
+| **Stylometry** | local stats | nothing | burstiness, repetition profile, connective boilerplate, LLM-register "tells" (EN+ZH) — weakest alone, but instant and zero-dependency |
 | **Plugins** | community | anything | e.g. the bundled `length_rhythm` example (30 lines) |
 
 Every result shows normalized score, raw statistic (+ direction), verdict,

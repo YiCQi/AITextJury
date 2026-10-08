@@ -20,6 +20,7 @@ export interface DetectorInfo {
   requires: string[];
   default_enabled: boolean;
   heavy: boolean;
+  recommended: boolean;
   available: boolean;
   reason: string;
   hints: string[];

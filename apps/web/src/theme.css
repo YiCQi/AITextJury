@@ -380,6 +380,12 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .chip.warn { color: var(--warn); background: var(--ai-soft); border-color: var(--warn-line); }
 .chip.uncertain { color: var(--uncertain); }
 .chip.accent { color: var(--accent); border-color: var(--accent-dim); }
+.chip.recommended {
+  color: var(--accent);
+  background: var(--accent-tint);
+  border-color: var(--accent-dim);
+  font-weight: 650;
+}
 
 .det-body {
   display: grid;

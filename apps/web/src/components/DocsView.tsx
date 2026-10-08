@@ -35,31 +35,42 @@ export function DocsView() {
 
       <div className="panel">
         <h3>The detectors</h3>
+        <p className="hint">
+          Listed strongest-first by general judgment strength — the same order
+          as the Detector panel.
+        </p>
         <table className="flat">
           <thead><tr><th>method</th><th>type</th><th>core idea</th></tr></thead>
           <tbody>
-            <tr><td><b>Stylometry</b></td><td>local stats</td>
-              <td>burstiness, repetition profile, connective boilerplate,
-                  LLM-register tells (EN+ZH). Zero dependency.</td></tr>
-            <tr><td><b>LLM Perplexity</b></td><td>local LM</td>
-              <td>mean per-token surprisal under a small causal LM
-                  (default gpt2; point it at a multilingual model for CJK).</td></tr>
+            <tr><td><b>LLM Judge</b> <span className="chip recommended">★ recommended</span></td><td>BYOK</td>
+              <td>your OpenAI/Gemini/DeepSeek/OpenRouter/Ollama/… model judges
+                  with a strict-JSON protocol; flags paragraphs and explains.
+                  The strongest single juror: full-context reasoning plus
+                  quoted evidence.</td></tr>
             <tr><td><b>Fast-DetectGPT</b></td><td>local LM</td>
               <td>conditional probability curvature: machine text defends its
                   probability peak against token perturbation
                   (<a href="https://arxiv.org/abs/2310.05130" target="_blank" rel="noreferrer">Bao et al., ICLR'24 ↗</a>).
+                  The strongest zero-shot local method.
                   This is a documented variant — see its in-card note.</td></tr>
             <tr><td><b>Binoculars</b></td><td>local LM pair</td>
               <td>cross-model agreement between a performer and an observer
                   (<a href="https://arxiv.org/abs/2401.12070" target="_blank" rel="noreferrer">Hans et al. 2024 ↗</a>).
-                  Faithful-in-spirit closed form; original thresholds don't
+                  Strong, but its threshold is domain-sensitive:
+                  faithful-in-spirit closed form; original thresholds don't
                   transfer — calibrate locally.</td></tr>
             <tr><td><b>HF Classifier</b></td><td>BYOM</td>
               <td>any HuggingFace text-classification model (HC3-style
-                  detectors). Transfers poorly across domains — measure it.</td></tr>
-            <tr><td><b>LLM Judge</b></td><td>BYOK</td>
-              <td>your OpenAI/Gemini/DeepSeek/OpenRouter/Ollama/… model judges
-                  with a strict-JSON protocol; flags paragraphs and explains.</td></tr>
+                  detectors). Strong in its training domain, transfers poorly
+                  across domains — measure it.</td></tr>
+            <tr><td><b>LLM Perplexity</b></td><td>local LM</td>
+              <td>mean per-token surprisal under a small causal LM
+                  (default gpt2; point it at a multilingual model for CJK).
+                  A soft signal — best as corroboration.</td></tr>
+            <tr><td><b>Stylometry</b></td><td>local stats</td>
+              <td>burstiness, repetition profile, connective boilerplate,
+                  LLM-register tells (EN+ZH). Zero dependency — the weakest
+                  evidence alone, but instant and useful for bulk screening.</td></tr>
             <tr><td><b>Plugins</b></td><td>community</td>
               <td>any Python file with <code>register(registry)</code> — see
                   the bundled <code>length_rhythm</code> example

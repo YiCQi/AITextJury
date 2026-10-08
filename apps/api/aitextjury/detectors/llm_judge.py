@@ -72,6 +72,7 @@ class LLMJudgeDetector(BaseDetector):
     requires: list[str] = []
     default_enabled = False
     heavy = False
+    recommended = True                 # strongest judge; panel lists it first
     DEFAULT_BANDS = (0.5, 0.18)   # the raw is already a probability
 
     def raw_direction(self) -> str:

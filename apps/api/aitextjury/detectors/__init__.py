@@ -22,12 +22,14 @@ from .llm_judge import LLMJudgeDetector
 from .stylometry import StylometryDetector
 
 CORE_DETECTORS: list[type[BaseDetector]] = [
-    StylometryDetector,
-    LMPerplexityDetector,
-    FastDetectGPTDetector,
-    BinocularsDetector,
-    HFClassifierDetector,
-    LLMJudgeDetector,
+    # Ordered by general judgment strength (strongest first) — this is the
+    # order the workbench panel and result cards show.
+    LLMJudgeDetector,       # full-context LLM judgment — recommended
+    FastDetectGPTDetector,  # strongest zero-shot local method (ICLR'24)
+    BinocularsDetector,     # strong, but its threshold is domain-sensitive
+    HFClassifierDetector,   # strong in-domain, transfers poorly across domains
+    LMPerplexityDetector,   # soft signal, best as corroboration
+    StylometryDetector,     # weakest alone, but zero-dependency
 ]
 
 

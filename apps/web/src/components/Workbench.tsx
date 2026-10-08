@@ -189,8 +189,9 @@ function DetectorPanel({ detectors, selected, onToggle }:
     <div className="panel">
       <h3>Detector panel</h3>
       <p className="hint">
-        Combine independent methods. Unavailable ones explain why — and how to
-        enable them.
+        Combine independent methods, listed strongest-first. The ★ recommended
+        LLM Judge needs a provider key (Providers tab). Unavailable ones
+        explain why — and how to enable them.
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {detectors.map((d) => {
@@ -210,6 +211,7 @@ function DetectorPanel({ detectors, selected, onToggle }:
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <b>{d.name}</b>
+                  {d.recommended && <span className="chip recommended">★ recommended</span>}
                   <span className={`chip ${d.uncalibrated ? "warn" : "accent"}`}>
                     {d.uncalibrated ? "uncalibrated" : "calibrated"}
                   </span>
