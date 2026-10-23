@@ -74,7 +74,7 @@ python -m aitextjury
 | Template     | `env_key`          | `base_url`                                          | model hint |
 |--------------|--------------------|-----------------------------------------------------|------------|
 | `openai`     | `OPENAI_API_KEY`   | `https://api.openai.com/v1`                        | `gpt-4o-mini` |
-| `gemini`     | `GEMINI_API_KEY`   | `https://generativelanguage.googleapis.com/v1beta` | `gemini-2.0-flash` |
+| `gemini`     | `GEMINI_API_KEY`   | `https://generativelanguage.googleapis.com/v1beta` | `gemini-2.5-flash` |
 | `deepseek`   | `DEEPSEEK_API_KEY` | `https://api.deepseek.com/v1`                      | `deepseek-chat` |
 | `openrouter` | `OPENROUTER_API_KEY` | `https://openrouter.ai/api/v1`                  | `openrouter/auto` |
 | `groq`       | `GROQ_API_KEY`     | `https://api.groq.com/openai/v1`                  | `llama-3.3-70b-versatile` |

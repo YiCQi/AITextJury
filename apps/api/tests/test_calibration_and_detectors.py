@@ -129,3 +129,17 @@ def test_finalize_default_bands_without_fit():
     assert result.calibration.status in ("uncalibrated",)
     assert result.threshold == 0.5
     assert result.score < 0.5  # human-ish text should map below mid
+
+
+def test_openai_payload_adapts_to_reasoning_model_errors():
+    from aitextjury.providers import _adapt_payload
+    payload = {"model": "gpt-5", "max_tokens": 4096, "temperature": 0.0,
+               "response_format": {"type": "json_object"}}
+    assert _adapt_payload(payload, "Unsupported parameter: 'max_tokens' "
+                          "... Use 'max_completion_tokens' instead.")
+    assert payload.get("max_completion_tokens") == 4096 and "max_tokens" not in payload
+    assert _adapt_payload(payload, "'temperature' does not support 0")
+    assert "temperature" not in payload
+    assert _adapt_payload(payload, "This response_format type is unavailable")
+    assert "response_format" not in payload
+    assert not _adapt_payload(payload, "invalid api key")

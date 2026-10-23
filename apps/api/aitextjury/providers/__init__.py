@@ -101,17 +101,35 @@ class OpenAICompatibleProvider(BaseProvider):
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
         async with httpx.AsyncClient(timeout=timeout) as client:
-            r = await client.post(
-                f"{self.base_url}/chat/completions",
-                headers=self._headers(), json=payload)
-            if r.status_code >= 400:
+            # Newer models (OpenAI gpt-5 / o-series, many reasoning models
+            # behind OpenAI-shaped gateways) reject some classic parameters
+            # with HTTP 400. Adapt the payload once per parameter and retry.
+            for _ in range(4):
+                r = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=self._headers(), json=payload)
+                if r.status_code < 400:
+                    break
+                if r.status_code != 400 or not _adapt_payload(payload, r.text):
+                    raise ProviderError(
+                        f"[{self.id}] HTTP {r.status_code}: {r.text[:400]}")
+            else:
                 raise ProviderError(
                     f"[{self.id}] HTTP {r.status_code}: {r.text[:400]}")
             data = r.json()
             try:
-                return data["choices"][0]["message"]["content"] or ""
+                choice = data["choices"][0]
+                content = choice["message"].get("content") or ""
             except Exception as e:
-                raise ProviderError(f"[{self.id}] unexpected schema: {e}") from e
+                raise ProviderError(
+                    f"[{self.id}] unexpected schema: {e}; body: "
+                    f"{str(data)[:300]}") from e
+            if not content.strip() and choice.get("finish_reason") == "length":
+                raise ProviderError(
+                    f"[{self.id}] model hit the output-token limit before "
+                    f"answering (reasoning models spend tokens thinking) — "
+                    f"try a non-reasoning model")
+            return content
 
     async def health(self, timeout=15.0) -> tuple[bool, str]:
         if not self.base_url:
@@ -150,7 +168,7 @@ class GeminiProvider(BaseProvider):
         if not key:
             raise ProviderError(f"[{self.id}] missing GEMINI_API_KEY")
         base = self.base_url or "https://generativelanguage.googleapis.com/v1beta"
-        model_id = self.pick_model(model) or "gemini-2.0-flash"
+        model_id = self.pick_model(model) or "gemini-2.5-flash"
         system_text = "\n".join(m["content"] for m in messages
                                 if m.get("role") == "system")
         contents = []
@@ -177,10 +195,23 @@ class GeminiProvider(BaseProvider):
                 raise ProviderError(f"[{self.id}] HTTP {r.status_code}: {r.text[:400]}")
             data = r.json()
         try:
-            parts = data["candidates"][0]["content"]["parts"]
-            return "".join(p.get("text", "") for p in parts)
+            cand = data["candidates"][0]
         except Exception as e:
-            raise ProviderError(f"[{self.id}] unexpected schema: {e}") from e
+            block = (data.get("promptFeedback") or {}).get("blockReason", "")
+            raise ProviderError(
+                f"[{self.id}] no candidates returned"
+                + (f" (blocked: {block})" if block else f": {str(data)[:300]}")) from e
+        parts = (cand.get("content") or {}).get("parts") or []
+        text = "".join(p.get("text", "") for p in parts if not p.get("thought"))
+        if not text.strip():
+            reason = cand.get("finishReason", "")
+            if reason == "MAX_TOKENS":
+                raise ProviderError(
+                    f"[{self.id}] model hit the output-token limit before "
+                    f"answering (thinking models spend tokens thinking)")
+            raise ProviderError(
+                f"[{self.id}] empty response (finishReason={reason or '?'})")
+        return text
 
     async def health(self, timeout=15.0) -> tuple[bool, str]:
         key = self.resolve_key()
@@ -209,6 +240,28 @@ class GeminiProvider(BaseProvider):
             return [m["name"].split("/")[-1] for m in r.json().get("models", [])]
         except Exception:
             return []
+
+
+def _adapt_payload(payload: dict, error_text: str) -> bool:
+    """Rewrite `payload` to dodge a parameter the server rejected (HTTP 400).
+
+    Returns True when something changed (worth retrying), else False.
+    """
+    err = error_text.lower()
+    if "max_tokens" in err and "max_tokens" in payload:
+        # OpenAI reasoning models: "use 'max_completion_tokens' instead"
+        payload["max_completion_tokens"] = payload.pop("max_tokens")
+        return True
+    if "temperature" in err and "temperature" in payload:
+        # e.g. "Only the default (1) value is supported"
+        payload.pop("temperature")
+        return True
+    if ("response_format" in err or "json_object" in err) \
+            and "response_format" in payload:
+        # the prompt still demands strict JSON; the parser tolerates fences
+        payload.pop("response_format")
+        return True
+    return False
 
 
 PROVIDER_CLASSES = {

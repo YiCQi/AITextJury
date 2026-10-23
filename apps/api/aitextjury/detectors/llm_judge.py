@@ -125,7 +125,7 @@ class LLMJudgeDetector(BaseDetector):
         user_msg = {"role": "user", "content": body}
         raw = await prov.chat(
             [{"role": "system", "content": SYSTEM_PROMPT}, user_msg],
-            model=model_override, temperature=0.0, max_tokens=1500,
+            model=model_override, temperature=0.0, max_tokens=4096,
             json_mode=True,
             timeout=float(ctx.settings.get("timeout_llm", 120)),
         )
