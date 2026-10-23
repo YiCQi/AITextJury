@@ -1,7 +1,7 @@
 """AITextJury CLI.
 
   python -m aitextjury.cli analyze report.txt -d stylometry,lm_perplexity
-  python -m aitextjury.cli calibrate -d stylometry --dataset demo
+  python -m aitextjury.cli calibrate -d stylometry --dataset hc3
   python -m aitextjury.cli detectors
 
 The CLI runs the same engine as the web UI — same detectors, same
@@ -121,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     p_cal = sub.add_parser("calibrate", help="fit calibration on a labeled set")
     p_cal.add_argument("-d", "--detectors", default="",
                        help="comma-separated detector ids (default: all)")
-    p_cal.add_argument("--dataset", default="demo")
+    p_cal.add_argument("--dataset", default="hc3")
     p_cal.set_defaults(func=cmd_calibrate)
 
     args = parser.parse_args(argv)

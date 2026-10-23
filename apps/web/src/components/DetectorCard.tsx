@@ -10,14 +10,17 @@ export function DetectorCard({ result }:{ result: DetectorResult }) {
   const hasSignals = Object.keys(result.signals).length > 0;
 
   if (result.error) {
+    // "abstained: …" = the method sat this text out (e.g. English-only LM on
+    // Chinese) — expected behaviour, not a failure, so it isn't styled as one
+    const abstained = result.error.startsWith("abstained: ");
     return (
       <div className="det-card">
         <div className="head">
           <span className="nm">{result.name}</span>
-          <span className="chip">error</span>
+          <span className="chip">{abstained ? "abstained" : "error"}</span>
         </div>
-        <div style={{ color: "var(--warn)", fontSize: 12.5 }}>
-          {result.error}
+        <div style={{ color: abstained ? "var(--text-dim)" : "var(--warn)", fontSize: 12.5 }}>
+          {abstained ? result.error.slice("abstained: ".length) : result.error}
         </div>
       </div>
     );

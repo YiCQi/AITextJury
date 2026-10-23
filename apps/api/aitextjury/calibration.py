@@ -30,7 +30,7 @@ from pathlib import Path
 
 from . import config as cfg
 
-BUILTIN_PACKAGED = Path(__file__).parent / "bench" / "demo.jsonl"
+BUILTIN_DIR = Path(__file__).parent / "bench"   # demo + hc3 (see bench/README.md)
 
 
 # ------------------------------------------------------------------ corpus --
@@ -51,10 +51,11 @@ class Corpus:
 
 def load_builtins() -> list[Corpus]:
     out: list[Corpus] = []
-    if BUILTIN_PACKAGED.exists():
-        samples = _read_jsonl(BUILTIN_PACKAGED)
-        if samples:
-            out.append(Corpus("demo", samples))
+    if BUILTIN_DIR.is_dir():
+        for f in sorted(BUILTIN_DIR.glob("*.jsonl")):
+            samples = _read_jsonl(f)
+            if samples:
+                out.append(Corpus(f.stem, samples))
     return out
 
 
@@ -212,6 +213,7 @@ async def calibrate_detector(detector, corpus: Corpus, *,
 
     raws, labels = [], []
     errors: list[str] = []
+    skipped = 0
     # Calibration uses a minimal context: providers only needed by llm_judge
     providers = ProviderManager()
     det_settings = {}
@@ -228,6 +230,10 @@ async def calibrate_detector(detector, corpus: Corpus, *,
             text=text, segmentation=seg, providers=providers,
             settings={}, get_detector_settings=det_settings,
             calibration=_Fits(), language=lang)
+        if detector.abstain_reason(ctx):
+            # out-of-language samples would only teach the fit noise
+            skipped += 1
+            continue
         try:
             outcome = await detector.analyze(ctx)
             if outcome.raw_score is None:
@@ -249,6 +255,7 @@ async def calibrate_detector(detector, corpus: Corpus, *,
     m = metrics(raws, labels, fit)
     fit.update({
         "n": len(raws),
+        "abstained": skipped,
         "dataset": corpus.name,
         **{k: v for k, v in m.items() if k != "threshold"},
         "threshold": m["threshold"],

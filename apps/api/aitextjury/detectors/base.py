@@ -27,6 +27,9 @@ class DetectorError(RuntimeError):
     """Raised by detectors when they cannot produce a result."""
 
 
+ABSTAIN_PREFIX = "abstained: "
+
+
 @dataclass
 class RawSegment:
     """A detector-native score for a segment (sentence or paragraph)."""
@@ -135,6 +138,15 @@ class BaseDetector(abc.ABC):
     async def analyze(self, ctx: AnalysisContext) -> RawOutcome:
         """Run the detector. Raise DetectorError on recoverable failure."""
 
+    def abstain_reason(self, ctx: AnalysisContext) -> str | None:
+        """Why this detector should sit this text out (None = run it).
+
+        Abstaining is not failing: the method is out of its depth (e.g. an
+        English-only LM on Chinese text), so its number would be noise. The
+        engine skips it and keeps it out of the consensus.
+        """
+        return None
+
     # ------------------------------------------------------------- helpers --
 
     def bands_help(self) -> str:
@@ -174,7 +186,9 @@ class BaseDetector(abc.ABC):
             store = ctx.calibration.get(self.id)
             if store:
                 fit = store
-                m = store.get("metrics", {})
+                # calibrate_detector() stores metrics at the top level;
+                # a nested "metrics" dict is accepted for older/hand-made fits
+                m = store.get("metrics") or store
                 calib_info = CalibrationInfo(
                     status="calibrated",
                     dataset=store.get("dataset", ""),

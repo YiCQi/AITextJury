@@ -25,8 +25,8 @@ from datetime import datetime, timezone
 
 from . import config as cfg
 from .calibration import CalibrationStore
-from .detectors.base import AnalysisContext, BaseDetector, DetectorError, \
-    RawOutcome
+from .detectors.base import ABSTAIN_PREFIX, AnalysisContext, BaseDetector, \
+    DetectorError, RawOutcome
 from .detectors import DetectorRegistry
 from .providers.manager import ProviderManager
 from .schemas import (AnalyzeReport, ConsensusEntry, ConsensusResult,
@@ -196,6 +196,10 @@ class Engine:
     async def _run_one(self, det: BaseDetector, ctx: AnalysisContext,
                        force_refresh: bool):
         t0 = time.monotonic()
+        # checked before the cache so stale out-of-language scores never leak
+        reason = det.abstain_reason(ctx)
+        if reason:
+            return None, int((time.monotonic() - t0) * 1000), ABSTAIN_PREFIX + reason
         timeout = self._timeout_for(det)
         settings = self.effective_settings()
         det_settings = ctx.det_settings(det.id)
@@ -260,7 +264,13 @@ class Engine:
         if uncalibrated:
             notes.append("uncalibrated detectors (default bands): "
                          + ", ".join(uncalibrated))
-        failed = [f"{r.name} ({r.error})" for r in results if r.error]
+        abstained = [f"{r.name} ({r.error[len(ABSTAIN_PREFIX):]})" for r in results
+                     if r.error and r.error.startswith(ABSTAIN_PREFIX)]
+        if abstained:
+            notes.append("abstained (out of their depth on this text): "
+                         + "; ".join(abstained))
+        failed = [f"{r.name} ({r.error})" for r in results
+                  if r.error and not r.error.startswith(ABSTAIN_PREFIX)]
         if failed:
             notes.append("failed detectors: " + "; ".join(failed))
         if len(ok) == 1:
@@ -270,8 +280,7 @@ class Engine:
         if ok:
             weights = []
             for r in ok:
-                acc = r.calibration.accuracy
-                w = 1.0 if acc is None else max(0.25, min(2.0, acc ** 2 + 0.15))
+                w = consensus_weight(r.calibration)
                 weights.append(w)
                 contributors.append(ConsensusEntry(
                     detector_id=r.detector_id, score=r.score,
@@ -346,6 +355,33 @@ class Engine:
             consensus_score=report.consensus.score,
             consensus_verdict=report.consensus.verdict,
             detectors_used=[r.detector_id for r in report.results])
+
+
+UNCALIBRATED_WEIGHT = 0.5
+WEIGHT_SHRINK_N = 30       # samples at which the measured skill counts half
+
+
+def consensus_weight(cal) -> float:
+    """A juror's vote weight from its calibration record.
+
+    Skill is the Gini coefficient 2·AUC−1 (0 = coin flip, 1 = perfect,
+    threshold-free), falling back to 2·acc−1 when AUC is missing. Mapped to
+    [0.25, 2.0], then shrunk toward the uncalibrated weight by sample size so
+    a fit on a handful of texts can't dominate. An uncalibrated juror sits
+    at 0.5: below any calibrated juror with real skill, above a chance one.
+    """
+    if cal is None or cal.status != "calibrated":
+        return UNCALIBRATED_WEIGHT
+    if cal.auc is not None:
+        skill = 2.0 * cal.auc - 1.0
+    elif cal.accuracy is not None:
+        skill = 2.0 * cal.accuracy - 1.0
+    else:
+        return UNCALIBRATED_WEIGHT
+    measured = 0.25 + 1.75 * max(0.0, min(1.0, skill))
+    n = max(0, cal.n_samples or 0)
+    k = n / (n + WEIGHT_SHRINK_N)
+    return (1.0 - k) * UNCALIBRATED_WEIGHT + k * measured
 
 
 class _ProviderProbe:

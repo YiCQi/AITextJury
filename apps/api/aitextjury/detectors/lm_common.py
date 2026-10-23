@@ -255,3 +255,32 @@ def clamp01(x: float) -> float:
 
 def sigmoid(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
+
+
+# ------------------------------------------------------- language gating --
+
+# GPT-2 was trained on English web text; on Chinese it sees byte-fallback
+# fragments and its surprisal stats say nothing about authorship.
+ENGLISH_ONLY_MODELS = ("gpt2", "distilgpt2")
+
+
+def is_english_only(model_id: str) -> bool:
+    name = (model_id or "").strip().lower().split("/")[-1]
+    return any(name == m or name.startswith(m + "-") for m in ENGLISH_ONLY_MODELS)
+
+
+def english_only_abstain(ctx, model_ids: list[str], settings: dict) -> str | None:
+    """Abstain reason when English-only models face mostly-CJK text.
+
+    Override per detector with `allow_any_language: true`, or by configuring
+    a multilingual model (any non-GPT-2 id disables the gate).
+    """
+    if settings.get("allow_any_language"):
+        return None
+    if getattr(ctx, "language", "en") != "zh":
+        return None
+    if not all(is_english_only(m) for m in model_ids):
+        return None
+    return (f"{', '.join(dict.fromkeys(model_ids))} is English-only and this "
+            f"text is mostly Chinese — its score would be noise. Configure a "
+            f"multilingual model or set allow_any_language to override")

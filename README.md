@@ -76,17 +76,18 @@ The other tabs:
 * **Providers** — paste any OpenAI-compatible or Gemini key (DeepSeek,
   OpenRouter, local Ollama — even keyless) to enable the **LLM Judge**.
   Keys stay in the local `data/providers.json`, masked on screen.
-* **Calibration** — drop labeled samples into `data/bench/*.jsonl`
-  (`{"text": ..., "label": 1}` AI / `0` human) and hit **Recalibrate**:
-  each detector gets an honest AUC / accuracy, and consensus weights
-  follow measured quality.
+* **Calibration** — hit **Recalibrate** on the built-in `hc3` set (200
+  real human vs ChatGPT answers, English + Chinese), or drop your own
+  labeled samples into `data/bench/*.jsonl` (`{"text": ..., "label": 1}`
+  AI / `0` human): each detector gets an honest AUC / accuracy, and
+  consensus weights follow measured quality.
 * **Methodology** — what each detector measures and what it is blind to.
 
 There is also a CLI with the same engine:
 
 ```bash
 python -m aitextjury.cli analyze article.txt -d stylometry -o report.json
-python -m aitextjury.cli calibrate -d stylometry --dataset demo
+python -m aitextjury.cli calibrate -d stylometry --dataset hc3
 ```
 
 > Privacy: everything except the LLM Judge runs **on your machine** — text,
@@ -127,8 +128,15 @@ never echoed back unmasked, and fall back to the provider's env var
 Out of the box, detectors run on documented **default bands** and are
 visibly flagged `uncalibrated`. Fit them on labeled data (UI button or
 `POST /api/calibration/run`) and each detector reports **AUC / accuracy /
-ECE / Brier** while consensus weights detectors by measured accuracy. The
-bundled demo set is a *demo* — calibrate on data from your own domain.
+ECE / Brier** while consensus weights detectors by measured skill (AUC,
+shrunk toward a neutral weight when the fit used few samples). The bundled
+`hc3` set (see `apps/api/aitextjury/bench/README.md`) is a reasonable
+start; calibrate on data from your own domain for real use.
+
+The GPT-2-based detectors (perplexity, Fast-DetectGPT, Binoculars)
+**abstain** on mostly-Chinese text — GPT-2 is English-only, so its numbers
+would be noise. Configure a multilingual model in their detector settings
+(or `allow_any_language: true`) to override.
 
 ## Plugins — anyone can add a detector
 

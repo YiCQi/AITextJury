@@ -12,7 +12,7 @@ import { fmtPct } from "../util";
 export function CalibrationView() {
   const [fits, setFits] = useState<Record<string, CalibrationFitPublic>>({});
   const [datasets, setDatasets] = useState<BenchDataset[]>([]);
-  const [dataset, setDataset] = useState("demo");
+  const [dataset, setDataset] = useState("hc3");
   const [busy, setBusy] = useState(false);
   const [lastRun, setLastRun] = useState<Record<string, CalibrationFitPublic> | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -72,10 +72,12 @@ export function CalibrationView() {
           </button>
         </div>
         <p className="hint" style={{ marginTop: 8 }}>
-          He note: local-LM detectors will download small models (~500 MB) on
-          first use and take a few minutes on CPU. The built-in demo set is
-          <i> a demo, not a benchmark</i> — for real-world use, drop your own
-          labeled <code>data/bench/*.jsonl</code> and fit on that.
+          Note: local-LM detectors will download small models (~500 MB) on
+          first use and take a few minutes on CPU. The built-in <b>hc3</b> set
+          is 200 real human vs ChatGPT answers (100 English, 100 Chinese, from
+          the HC3 corpus); <b>demo</b> is a tiny hand-written smoke test. Your
+          own domain matters most — drop labeled{" "}
+          <code>data/bench/*.jsonl</code> and fit on that.
         </p>
         {err && <div style={{ color: "var(--warn)" }}>{err}</div>}
         {lastRun && (

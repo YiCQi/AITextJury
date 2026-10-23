@@ -22,7 +22,7 @@ Endpoints (all JSON, all prefixed /api):
   PUT  /settings                   — update settings (persisted locally)
   GET  /calibration                — stored calibration fits
   POST /calibration/run            — recalibrate detectors on a labeled set
-  GET  /bench                      — labeled corpora (demo + user JSONL)
+  GET  /bench                      — labeled corpora (built-in demo/hc3 + user JSONL)
 """
 from __future__ import annotations
 
@@ -74,7 +74,7 @@ def save_settings(settings: dict) -> dict:
 
 class CalibrationRunRequest(BaseModel):
     detector_ids: list[str] | None = None
-    dataset: str = "demo"
+    dataset: str = "hc3"
     max_chars: int = 4000
 
 
@@ -313,8 +313,10 @@ def build_app(world: World | None = None) -> FastAPI:
         return {"datasets": out}
 
     def _corpus_where(name: str) -> str:
-        if name == "demo":
-            return str(Path(__file__).parent / "bench" / "demo.jsonl")
+        user = cfg.data_dir() / "bench" / f"{name}.jsonl"
+        builtin = Path(__file__).parent / "bench" / f"{name}.jsonl"
+        if builtin.exists() and not user.exists():
+            return str(builtin)
         return str(cfg.data_dir() / "bench" / f"{name}.jsonl")
 
     # ------------------------------------------------- static UI (docker image)

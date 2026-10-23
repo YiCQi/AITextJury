@@ -41,7 +41,8 @@ from ..schemas import Availability, EvidenceItem
 from .base import AnalysisContext, BaseDetector, DetectorError, RawOutcome, \
     RawSegment
 from .lm_common import (HUB, aggregate_to_sentences, build_chunks,
-                        cross_ent_terms, forward_stats, ml_status,
+                        cross_ent_terms, english_only_abstain,
+                        forward_stats, ml_status,
                         ml_requirement_hint, tokenize_for_heatmap)
 
 CHUNK_TOKENS = 512
@@ -74,6 +75,12 @@ class BinocularsDetector(BaseDetector):
                 ok=False, reason=f"missing optional ML deps: {err}",
                 hints=[ml_requirement_hint()])
         return Availability(ok=True)
+
+    def abstain_reason(self, ctx: AnalysisContext) -> str | None:
+        settings = ctx.det_settings(self.id)
+        return english_only_abstain(ctx, [
+            settings.get("performer_model", DEFAULT_PERFORMER),
+            settings.get("observer_model", DEFAULT_OBSERVER)], settings)
 
     async def analyze(self, ctx: AnalysisContext) -> RawOutcome:
         try:

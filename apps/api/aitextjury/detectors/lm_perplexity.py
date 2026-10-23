@@ -24,7 +24,8 @@ from ..schemas import Availability, EvidenceItem
 from .base import AnalysisContext, BaseDetector, DetectorError, RawOutcome, \
     RawSegment
 from .lm_common import (HUB, aggregate_to_sentences, build_chunks, \
-    forward_stats, ml_status, ml_requirement_hint, tokenize_for_heatmap)
+    english_only_abstain, forward_stats, ml_status, ml_requirement_hint, \
+    tokenize_for_heatmap)
 
 CHUNK_TOKENS = 512
 OVERLAP = 128
@@ -55,6 +56,10 @@ class LMPerplexityDetector(BaseDetector):
                 ok=False, reason=f"missing optional ML deps: {err}",
                 hints=[ml_requirement_hint()])
         return Availability(ok=True)
+
+    def abstain_reason(self, ctx: AnalysisContext) -> str | None:
+        settings = ctx.det_settings(self.id)
+        return english_only_abstain(ctx, [settings.get("model", DEFAULT_MODEL)], settings)
 
     async def analyze(self, ctx: AnalysisContext) -> RawOutcome:
         try:

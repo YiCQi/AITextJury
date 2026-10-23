@@ -37,3 +37,6 @@ include = ["aitextjury*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+aitextjury = ["bench/*.jsonl", "bench/*.md", "static/**/*"]
