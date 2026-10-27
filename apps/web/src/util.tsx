@@ -68,3 +68,45 @@ export function timeAgo(iso: string): string {
   if (s < 86400 * 2) return `${Math.round(s / 3600)}h ago`;
   return `${Math.round(s / 86400)}d ago`;
 }
+
+// ---------------------------------------------------------- text helpers --
+
+const CJK_RE = /[㐀-鿿豈-﫿]/g;
+
+/** Rough length in a language-aware way: CJK counts characters, the rest words. */
+export function textSize(text: string): { cjk: number; words: number; label: string } {
+  const cjk = (text.match(CJK_RE) || []).length;
+  const words = text.replace(CJK_RE, " ").trim().split(/\s+/).filter(Boolean).length;
+  const label = cjk > words ? `${cjk.toLocaleString()} 字` : `${words.toLocaleString()} words`;
+  return { cjk, words, label };
+}
+
+/** True when the text is too short for any detector to say much. */
+export function isTooShort(text: string): boolean {
+  const { cjk, words } = textSize(text);
+  return cjk + words < 60 && !(cjk >= 100);
+}
+
+// ------------------------------------------------------ detector helpers --
+
+/** One plain-language line per built-in detector (full method text stays in "more"). */
+export const DETECTOR_PLAIN: Record<string, string> = {
+  llm_judge: "Asks your own AI model (via API key) to judge the writing and point at suspicious paragraphs.",
+  binoculars: "Two small language models compare notes: machine text looks unusually predictable to both. Strong on English.",
+  fast_detect_gpt: "Checks whether the text sits at a “too likely” peak for a language model. English only.",
+  lm_perplexity: "How predictable each sentence is to a small language model — machine text tends to be smoother. English only.",
+  hf_classifier: "A trained AI-text classifier you pick from Hugging Face.",
+  stylometry: "Writing-style statistics: sentence rhythm, word reuse, stock phrases. Instant; English and Chinese.",
+  length_rhythm: "Whether paragraph lengths are suspiciously even. Instant; a weak single signal.",
+};
+
+export function speedLabel(d: { heavy: boolean; family: string }): string {
+  if (d.family === "byok_llm") return "uses your API";
+  return d.heavy ? "local model · slower" : "instant";
+}
+
+export const VERDICT_HEADLINE: Record<string, string> = {
+  likely_ai: "Likely AI-generated",
+  likely_human: "Likely human-written",
+  uncertain: "Inconclusive",
+};

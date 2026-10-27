@@ -60,7 +60,10 @@ export default function App() {
       </div>
 
       <main className="page">
-        {tab === "workbench" && <Workbench />}
+        {/* the workbench stays mounted so a draft or result survives tab switches */}
+        <div hidden={tab !== "workbench"}>
+          <Workbench active={tab === "workbench"} onNavigate={setTab} />
+        </div>
         {tab === "history" && <HistoryView />}
         {tab === "calibration" && <CalibrationView />}
         {tab === "providers" && <ProvidersView />}

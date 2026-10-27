@@ -23,11 +23,13 @@ Endpoints (all JSON, all prefixed /api):
   GET  /calibration                — stored calibration fits
   POST /calibration/run            — recalibrate detectors on a labeled set
   GET  /bench                      — labeled corpora (built-in demo/hc3 + user JSONL)
+  GET  /sample                     — one random labeled text to try (hc3 by default)
 """
 from __future__ import annotations
 
 import asyncio
 import json
+import random
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -301,6 +303,27 @@ def build_app(world: World | None = None) -> FastAPI:
                 "labels": corpus.label_counts(), "results": results}
 
     # ----------------------------------------------------------------- bench
+
+    @app.get("/api/sample")
+    def sample(language: str = "", label: int | None = None,
+               dataset: str = "hc3"):
+        """A random real example, so first-time users can try the panel.
+
+        The label travels with it so the UI can reveal the ground truth
+        *after* the analysis — a quick feel for when detectors are right.
+        """
+        corpus = all_corpora().get(dataset)
+        if corpus is None:
+            raise HTTPException(404, f"unknown dataset: {dataset}")
+        pool = [s for s in corpus.samples
+                if (not language or s.get("language") == language)
+                and (label is None or s["label"] == label)]
+        if not pool:
+            raise HTTPException(404, "no sample matches that filter")
+        pick = random.choice(pool)
+        return {"text": pick["text"], "label": pick["label"],
+                "source": pick.get("source", ""),
+                "language": pick.get("language", ""), "dataset": dataset}
 
     @app.get("/api/bench")
     def bench():

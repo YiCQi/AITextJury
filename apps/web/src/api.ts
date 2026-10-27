@@ -98,3 +98,11 @@ export const runCalibration = (detector_ids: string[] | null, dataset: string) =
     labels: { ai: number; human: number };
     results: Record<string, CalibrationFitPublic & { ok: boolean }>;
   }>("POST", "/calibration/run", { detector_ids, dataset });
+
+export interface SampleText {
+  text: string; label: 0 | 1; source: string; language: string; dataset: string;
+}
+
+/** A random real labeled example (human or AI) from a built-in bench. */
+export const fetchSample = (language: string, label: 0 | 1) =>
+  getJSON<SampleText>(`/sample?language=${language}&label=${label}`);

@@ -58,12 +58,18 @@ scripts\dev.ps1           # workbench at http://localhost:5173, API at :8000
 
 ## Using the workbench
 
-Paste text in the **Workbench** tab, tick detectors, hit **Analyze**, then
-read the page top-to-bottom:
+Paste text in the **Workbench** tab (or drop a `.txt`/`.md` file, or click
+**Try a real example** for a labeled human/AI sample in English or Chinese),
+pick a preset — **Fast**, **Standard** or **Everything** — and hit
+**Analyze** (<kbd>Ctrl</kbd>+<kbd>Enter</kbd>). Your draft and detector choice
+are remembered. Then read the page top-to-bottom:
 
-1. **Consensus** — the calibration-weighted vote across detectors. When
-   detectors disagree, the notes say who said what; disagreement is
-   information, not a bug.
+1. **Verdict** — a plain sentence (*Likely AI-generated / Likely
+   human-written / Inconclusive*) from the calibration-weighted vote, with
+   how many detectors agree; the full vote table is one click away, and
+   **Copy summary** / **Download JSON** export the run. For a real example
+   the ground-truth label is revealed here. When detectors disagree, the
+   notes say who said what; disagreement is information, not a bug.
 2. **Detector cards** — every `score` is normalized so **higher = more
    AI**, always. Raw values keep their native direction and each card
    states it (e.g. *Binoculars: raw 6.4, lower = AI*).

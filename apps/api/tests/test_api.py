@@ -165,3 +165,11 @@ def test_settings_roundtrip(client):
             ["observer_model"] == "gpt2")
     r = client.get("/api/settings")
     assert r.status_code == 200
+
+
+def test_sample_endpoint_filters_and_reports_label(client):
+    r = client.get("/api/sample", params={"language": "zh", "label": 0})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["label"] == 0 and body["language"] == "zh" and body["text"]
+    assert client.get("/api/sample", params={"dataset": "nope"}).status_code == 404
