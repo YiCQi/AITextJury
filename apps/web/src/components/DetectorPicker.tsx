@@ -1,5 +1,5 @@
 import type { DetectorInfo } from "../types";
-import { DETECTOR_PLAIN, speedLabel } from "../util";
+import { baseId, DETECTOR_PLAIN, speedLabel } from "../util";
 
 export type Preset = "fast" | "standard" | "everything";
 
@@ -40,7 +40,7 @@ export function DetectorPicker({ detectors, selected, onChange, onNavigate }:
     return ids.length === selected.size && ids.every((id) => selected.has(id));
   })?.[0];
   const uncalibrated = available.filter((d) => selected.has(d.id) && d.uncalibrated);
-  const judge = detectors.find((d) => d.id === "llm_judge");
+  const judges = available.filter((d) => d.family === "byok_llm");
 
   const toggle = (id: string) => {
     const next = new Set(selected);
@@ -65,11 +65,21 @@ export function DetectorPicker({ detectors, selected, onChange, onNavigate }:
           : "custom selection"}
       </p>
 
-      {judge && !judge.available && (
+      {judges.length === 0 ? (
         <div className="callout">
           <span>
             <b>LLM Judge</b> is the strongest juror — it needs an API key
             (or a local Ollama).
+          </span>
+          <button className="ghost small" onClick={() => onNavigate("providers")}>
+            Add a provider →
+          </button>
+        </div>
+      ) : judges.length === 1 && (
+        <div className="callout">
+          <span>
+            Add a second API (another vendor) and both judge side by side —
+            agreement between different models is strong evidence.
           </span>
           <button className="ghost small" onClick={() => onNavigate("providers")}>
             Add a provider →
@@ -90,8 +100,8 @@ export function DetectorPicker({ detectors, selected, onChange, onNavigate }:
                   <span className="chip">{speedLabel(d)}</span>
                   {!d.uncalibrated && <span className="chip accent">calibrated</span>}
                 </div>
-                <div className="det-row-plain">{DETECTOR_PLAIN[d.id] ?? d.description}</div>
-                {DETECTOR_PLAIN[d.id] && (
+                <div className="det-row-plain">{DETECTOR_PLAIN[baseId(d.id)] ?? d.description}</div>
+                {DETECTOR_PLAIN[baseId(d.id)] && (
                   <details className="more" onClick={(e) => e.stopPropagation()}>
                     <summary>how it works</summary>
                     <div>{d.description}</div>

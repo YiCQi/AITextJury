@@ -18,7 +18,7 @@ from . import __version__ as VERSION
 from .calibration import CalibrationStore, all_corpora, calibrate_detector, \
     fit_to_public
 from .detectors.lm_common import ml_status
-from .main import World
+from .main import JUDGE_CALIB_SAMPLES, World
 from .providers.manager import ProviderManager
 
 
@@ -75,19 +75,28 @@ def cmd_calibrate(args) -> int:
         print(f"dataset '{args.dataset}' not found. available: "
               f"{list(corpora.keys())}", file=sys.stderr)
         return 2
-    det_ids = [s.strip() for s in args.detectors.split(",")] if args.detectors \
-        else w.registry.ids()
-    for det_id in det_ids:
-        det = w.registry.get(det_id)
-        if det is None:
-            continue
-        avail = det.availability(None)
+    try:
+        # LLM jurors cost API calls: only when named (-d llm_judge = all of them)
+        dets = (w.engine.resolve([s.strip() for s in args.detectors.split(",")])
+                if args.detectors
+                else [d for d in w.engine.jurors() if d.family != "byok_llm"])
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    for det in dets:
+        det_id = det.id
+        paid = det.family == "byok_llm"
+        avail = det.availability(w.providers if paid else None)
         if not avail.ok:
             print(f"  {det_id:>22}  skip ({avail.reason})")
             continue
+        n = args.max_samples or (JUDGE_CALIB_SAMPLES if paid else 0)
         print(f"  {det_id:>22}  calibrating on {corpus.name} "
-              f"(n={corpus.n}) …", end="", flush=True)
-        fit = asyncio.run(calibrate_detector(det, corpus))
+              f"(n={min(n, corpus.n) if n else corpus.n}) …", end="", flush=True)
+        fit = asyncio.run(calibrate_detector(
+            det, corpus, max_samples=n or None, concurrency=4 if paid else 1,
+            providers=w.providers,
+            det_settings={det_id: w.engine.detector_eff(det_id)}))
         if fit.get("ok"):
             w.calibration.put(det_id, fit["fit"])
             m = fit["fit"]
@@ -122,6 +131,9 @@ def main(argv: list[str] | None = None) -> int:
     p_cal.add_argument("-d", "--detectors", default="",
                        help="comma-separated detector ids (default: all)")
     p_cal.add_argument("--dataset", default="hc3")
+    p_cal.add_argument("--max-samples", type=int, default=0,
+                       help="stratified subset size (LLM jurors default to "
+                            f"{JUDGE_CALIB_SAMPLES})")
     p_cal.set_defaults(func=cmd_calibrate)
 
     args = parser.parse_args(argv)

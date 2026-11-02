@@ -121,6 +121,29 @@ If no usable provider is configured, the Judge reports
 `status: "unavailable"` with a hint — it never blocks the rest of the
 analysis run.
 
+### Several APIs on the jury
+
+Every **enabled** provider becomes its own juror, `llm_judge@<provider id>`
+(shown as *LLM Judge · <your note>*). They run in parallel, each gets its own
+result card, calibration fit and consensus vote — agreement between models
+from different vendors is much stronger evidence than one model's opinion.
+Disable a provider to take it off the jury. Asking the API for the bare id
+`llm_judge` runs all LLM jurors.
+
+Settings under `detectors.llm_judge` (e.g. `model`, `weight`) apply to every
+LLM juror; `detectors."llm_judge@<id>"` overrides them for one.
+
+### Weight in the consensus
+
+Uncalibrated, an LLM juror votes with weight **1.0** (local detectors: 0.5).
+Calibrating it — Calibration tab → *LLM jurors* → *Calibrate*, or
+`python -m aitextjury.cli calibrate -d llm_judge` — runs it on a balanced
+40-sample subset of `hc3` (≈40 API calls per juror; `--max-samples` to
+change) and replaces that default with its measured accuracy. "Recalibrate
+free detectors" never calls your APIs. Any juror's vote can also be scaled
+with a multiplier (Calibration tab, or detector setting `weight`; 0 mutes
+it).
+
 ## Privacy & storage model
 
 * `data/providers.json` is gitignored; keys never appear in analysis

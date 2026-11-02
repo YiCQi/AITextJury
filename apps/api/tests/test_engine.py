@@ -168,3 +168,74 @@ def test_builtin_hc3_bench_is_balanced_bilingual():
     raw = Path(aitextjury.__file__).parent / "bench" / "hc3.jsonl"
     rows = [json.loads(l) for l in raw.read_text(encoding="utf-8").splitlines()]
     assert all(r.get("license") for r in rows)  # per-sample attribution
+
+
+def _jury_engine(tmp_path, monkeypatch, detector_settings=None):
+    """Engine with two fake OpenAI-compatible providers that never hit the net."""
+    import json as _json
+    from aitextjury.providers import OpenAICompatibleProvider
+
+    async def fake_chat(self, messages, **_):
+        verdict = "ai" if self.id == "alpha" else "human"
+        return _json.dumps({"verdict": verdict, "confidence": 80,
+                            "summary": self.id, "flagged_paragraphs": []})
+    monkeypatch.setattr(OpenAICompatibleProvider, "chat", fake_chat)
+    pm = ProviderManager(path=tmp_path / "providers.json")
+    pm.upsert({"id": "alpha", "base_url": "http://127.0.0.1:9/v1", "note": "Alpha"})
+    pm.upsert({"id": "beta:2", "base_url": "http://127.0.0.1:9/v1"})
+    return Engine(registry=build_default_registry(), providers=pm,
+                  calibration=CalibrationStore(root=tmp_path / "calib"),
+                  settings={"detect": {"cache_enabled": False},
+                            "detectors": detector_settings or {}})
+
+
+def test_each_provider_is_its_own_llm_juror(tmp_path, monkeypatch):
+    engine = _jury_engine(tmp_path, monkeypatch)
+    ids = [d["id"] for d in engine.available_detectors()]
+    assert "llm_judge@alpha" in ids and "llm_judge@beta:2" in ids
+    assert "llm_judge" not in ids
+    report = asyncio.run(engine.analyze(
+        "Furthermore, it is important to note this. Moreover, it is pivotal.",
+        ["llm_judge"]))                      # bare id = the whole LLM jury
+    by_id = {r.detector_id: r for r in report.results}
+    assert by_id["llm_judge@alpha"].score > 0.5 > by_id["llm_judge@beta:2"].score
+    assert by_id["llm_judge@alpha"].name == "LLM Judge · Alpha"
+    weights = {c.detector_id: c.weight for c in report.consensus.contributors}
+    assert weights == {"llm_judge@alpha": 1.0, "llm_judge@beta:2": 1.0}
+
+
+def test_weight_multiplier_scales_and_mutes(tmp_path, monkeypatch):
+    engine = _jury_engine(tmp_path, monkeypatch, {
+        "llm_judge": {"weight": 2.0},            # every LLM juror
+        "llm_judge@beta:2": {"weight": 0},       # ...except mute this one
+        "stylometry": {"weight": 1.5}})
+    report = asyncio.run(engine.analyze(
+        "Furthermore, it is important to note this. Moreover, it is pivotal.",
+        ["stylometry", "llm_judge"]))
+    weights = {c.detector_id: c.weight for c in report.consensus.contributors}
+    assert weights["llm_judge@alpha"] == 2.0
+    assert weights["llm_judge@beta:2"] == 0.0
+    assert weights["stylometry"] == 0.75
+
+
+def test_llm_juror_small_sample_calibration(tmp_path, monkeypatch):
+    from aitextjury.calibration import all_corpora, calibrate_detector
+    engine = _jury_engine(tmp_path, monkeypatch)
+    judge = engine.resolve(["llm_judge@alpha"])[0]
+    fit = asyncio.run(calibrate_detector(
+        judge, all_corpora()["hc3"], max_samples=40, concurrency=4,
+        providers=engine.providers))
+    assert fit["fit"]["n"] == 40 if fit["ok"] else "insufficient" in fit["reason"]
+    engine.calibration.root.mkdir(parents=True, exist_ok=True)
+    if fit["ok"]:
+        engine.calibration.put(judge.id, fit["fit"])       # ':'-safe file name
+        assert engine.calibration.get("llm_judge@alpha") is not None
+
+
+def test_stratified_subset_is_balanced():
+    from aitextjury.calibration import all_corpora, stratified_subset
+    sub = stratified_subset(all_corpora()["hc3"].samples, 40)
+    cells = {}
+    for s in sub:
+        cells[(s["language"], s["label"])] = cells.get((s["language"], s["label"]), 0) + 1
+    assert len(sub) == 40 and set(cells.values()) == {10}

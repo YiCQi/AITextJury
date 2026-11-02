@@ -121,6 +121,11 @@ class BaseDetector(abc.ABC):
     default_enabled: bool = True
     heavy: bool = False                # slower / downloads models
     recommended: bool = False          # workbench shows a "recommended" badge
+    # Consensus vote weight while uncalibrated (calibrated jurors earn theirs
+    # from measured AUC). 0.5 = "unknown quality"; judges reading the whole
+    # text with an LLM start higher. Users can still scale any juror with
+    # the detector setting `weight` (a multiplier).
+    uncalibrated_weight: float = 0.5
 
     # Default normalization bands used until a calibration fit exists.
     #   mid: raw value separating human|AI

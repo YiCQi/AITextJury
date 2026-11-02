@@ -100,6 +100,9 @@ export const DETECTOR_PLAIN: Record<string, string> = {
   length_rhythm: "Whether paragraph lengths are suspiciously even. Instant; a weak single signal.",
 };
 
+/** "llm_judge@deepseek" -> "llm_judge": jurors share their template's texts. */
+export const baseId = (id: string) => id.split("@")[0];
+
 export function speedLabel(d: { heavy: boolean; family: string }): string {
   if (d.family === "byok_llm") return "uses your API";
   return d.heavy ? "local model · slower" : "instant";

@@ -75,9 +75,17 @@ def save_settings(settings: dict) -> dict:
 
 
 class CalibrationRunRequest(BaseModel):
+    # None = every free detector; LLM jurors (paid API calls) only run when
+    # named explicitly — "llm_judge" names the whole LLM jury
     detector_ids: list[str] | None = None
     dataset: str = "hc3"
     max_chars: int = 4000
+    # stratified subset size; default: all samples, or JUDGE_CALIB_SAMPLES
+    # for LLM jurors to keep the API bill small
+    max_samples: int | None = None
+
+
+JUDGE_CALIB_SAMPLES = 40
 
 
 @dataclass
@@ -260,10 +268,21 @@ def build_app(world: World | None = None) -> FastAPI:
     def calibration_summary():
         w: World = app.state.world
         out = {}
-        for det in w.registry.ordered():
+        for det in w.engine.jurors():
             fit = w.calibration.get(det.id)
-            out[det.id] = fit_to_public(fit) if fit else {
+            pub = fit_to_public(fit) if fit else {
                 "status": "uncalibrated", "threshold": 0.5}
+            info = CalibrationInfo(
+                status="calibrated" if fit else "uncalibrated",
+                auc=(fit or {}).get("auc"), accuracy=(fit or {}).get("acc"),
+                n_samples=(fit or {}).get("n", 0))
+            pub.update({
+                "name": det.name,
+                "family": det.family,
+                "multiplier": w.engine.detector_eff(det.id).get("weight", 1.0),
+                "weight": round(w.engine.juror_weight(det, info), 3),
+            })
+            out[det.id] = pub
         return {"calibration": out}
 
     @app.post("/api/calibration/run")
@@ -274,19 +293,27 @@ def build_app(world: World | None = None) -> FastAPI:
         if corpus is None:
             raise HTTPException(404, f"dataset '{req.dataset}' not found "
                                      f"(available: {list(corpora.keys())})")
-        det_ids = [d for d in w.registry.ids()
-                   if d in (req.detector_ids or w.registry.ids())]
+        try:
+            dets = (w.engine.resolve(req.detector_ids) if req.detector_ids
+                    else [d for d in w.engine.jurors() if d.family != "byok_llm"])
+        except ValueError as e:
+            raise HTTPException(422, str(e))
         results: dict[str, dict] = {}
-        for det_id in det_ids:
-            det = w.registry.get(det_id)
-            avail = det.availability(None)
+        for det in dets:
+            det_id = det.id
+            paid = det.family == "byok_llm"
+            avail = det.availability(w.providers if paid else None)
             if not avail.ok:
                 results[det_id] = {"ok": False,
                                    "reason": f"unavailable: {avail.reason}"}
                 continue
             try:
                 fit = await calibrate_detector(
-                    det, corpus, max_chars=req.max_chars)
+                    det, corpus, max_chars=req.max_chars,
+                    max_samples=req.max_samples or (JUDGE_CALIB_SAMPLES if paid else None),
+                    concurrency=4 if paid else 1,
+                    providers=w.providers,
+                    det_settings={det_id: w.engine.detector_eff(det_id)})
             except Exception as e:
                 fit = {"ok": False, "reason": f"{type(e).__name__}: {e}"}
             if fit.get("ok") and fit.get("fit"):

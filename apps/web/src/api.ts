@@ -92,12 +92,14 @@ export const testProvider = (id: string) =>
 export const saveSettings = (settings: Partial<Settings>) =>
   sendJSON<{ settings: Settings }>("PUT", "/settings", settings);
 
-export const runCalibration = (detector_ids: string[] | null, dataset: string) =>
+/** `detector_ids: null` = every free detector (LLM jurors only when named). */
+export const runCalibration = (detector_ids: string[] | null, dataset: string,
+                               max_samples?: number) =>
   sendJSON<{
     dataset: string; n_samples: number;
     labels: { ai: number; human: number };
     results: Record<string, CalibrationFitPublic & { ok: boolean }>;
-  }>("POST", "/calibration/run", { detector_ids, dataset });
+  }>("POST", "/calibration/run", { detector_ids, dataset, max_samples });
 
 export interface SampleText {
   text: string; label: 0 | 1; source: string; language: string; dataset: string;

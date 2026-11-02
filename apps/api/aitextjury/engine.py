@@ -24,10 +24,11 @@ import uuid
 from datetime import datetime, timezone
 
 from . import config as cfg
-from .calibration import CalibrationStore
+from .calibration import CalibrationStore, safe_filename
 from .detectors.base import ABSTAIN_PREFIX, AnalysisContext, BaseDetector, \
     DetectorError, RawOutcome
 from .detectors import DetectorRegistry
+from .detectors.llm_judge import LLMJudgeDetector
 from .providers.manager import ProviderManager
 from .schemas import (AnalyzeReport, ConsensusEntry, ConsensusResult,
                       EvidenceItem, HistoryEntry, SegmentScore, TextStats,
@@ -68,9 +69,57 @@ class Engine:
         return merged
 
     def detector_eff(self, det_id: str) -> dict:
-        base = dict(cfg.DEFAULT_SETTINGS["detectors"].get(det_id, {}))
+        # "llm_judge@deepseek" inherits everything set for "llm_judge"
+        base = self.detector_eff(det_id.split("@")[0]) if "@" in det_id else {}
+        base.update(cfg.DEFAULT_SETTINGS["detectors"].get(det_id, {}))
         base.update(self.detector_settings.get(det_id, {}) or {})
         return base
+
+    # -------------------------------------------------------------- jurors --
+
+    def jurors(self) -> list[BaseDetector]:
+        """Registry detectors, with the LLM Judge expanded per provider.
+
+        Every enabled provider becomes its own juror (`llm_judge@<id>`), so
+        several APIs judge side by side, each calibrated and weighted on its
+        own. With no provider configured the unbound `llm_judge` stays as an
+        (unavailable) placeholder that explains how to add one.
+        """
+        out: list[BaseDetector] = []
+        for det in self.registry.ordered():
+            if det.id != LLMJudgeDetector.id:
+                out.append(det)
+                continue
+            judges = [LLMJudgeDetector(p["id"], p.get("note") or p["id"])
+                      for p in self.providers.enabled()]
+            out.extend(judges or [det])
+        return out
+
+    def resolve(self, detector_ids: list[str]) -> list[BaseDetector]:
+        """Ids -> jurors. Bare `llm_judge` means the whole LLM jury."""
+        by_id = {d.id: d for d in self.jurors()}
+        chosen: list[BaseDetector] = []
+        for det_id in detector_ids:
+            if det_id == LLMJudgeDetector.id:
+                group = [d for d in by_id.values() if d.family == "byok_llm"]
+            elif det_id in by_id:
+                group = [by_id[det_id]]
+            elif det_id.startswith(LLMJudgeDetector.id + "@"):
+                group = [LLMJudgeDetector(det_id.split("@", 1)[1])]
+            else:
+                raise ValueError(f"unknown detector: {det_id}")
+            chosen.extend(d for d in group if d not in chosen)
+        return chosen
+
+    def juror_weight(self, det: BaseDetector, cal) -> float:
+        """Consensus weight: measured skill (or the juror's prior) x the user's
+        `weight` multiplier from detector settings (0 mutes a juror)."""
+        try:
+            mult = float(self.detector_eff(det.id).get("weight", 1.0))
+        except (TypeError, ValueError):
+            mult = 1.0
+        mult = max(0.0, min(5.0, mult))
+        return consensus_weight(cal, det.uncalibrated_weight) * mult
 
     # ------------------------------------------------------------- history --
 
@@ -82,8 +131,8 @@ class Engine:
     def available_detectors(self) -> list[dict]:
         """Registry snapshot + live availability (for the picker UI)."""
         out = []
-        for det in self.registry.ordered():
-            if det.id == "llm_judge":
+        for det in self.jurors():
+            if det.family == "byok_llm":
                 av = det.availability(_ProviderProbe(self.providers))
             else:
                 av = det.availability(None)
@@ -132,16 +181,13 @@ class Engine:
 
         # resolve detector set
         if detector_ids:
-            chosen: list[BaseDetector] = []
-            for det_id in detector_ids:
-                d = self.registry.get(det_id)
-                if d is None:
-                    raise ValueError(f"unknown detector: {det_id}")
-                chosen.append(d)
+            chosen = self.resolve(detector_ids)
         else:
-            chosen = [d for d in self.registry.ordered() if d.default_enabled]
+            chosen = [d for d in self.jurors() if d.default_enabled]
         if not chosen:
             raise ValueError("no detectors selected")
+        ctx._detector_settings.update(
+            {d.id: self.detector_eff(d.id) for d in chosen})
 
         # run all detectors concurrently
         jobs = [self._run_one(det, ctx, force_refresh) for det in chosen]
@@ -152,7 +198,8 @@ class Engine:
             results.append(det.finalize(outcome, ctx, segmentation,
                                         runtime_ms, error))
 
-        consensus = self._consensus(results, segmentation)
+        consensus = self._consensus(results, segmentation,
+                                    {d.id: d for d in chosen})
 
         report = AnalyzeReport(
             id=uuid.uuid4().hex[:12],
@@ -234,7 +281,7 @@ class Engine:
         return cfg.subdir("cache")
 
     def _cache_read(self, det_id: str, key: str) -> dict | None:
-        p = self._cache_dir() / f"{det_id}_{key}.json"
+        p = self._cache_dir() / f"{safe_filename(det_id)}_{key}.json"
         if not p.exists():
             return None
         try:
@@ -244,7 +291,7 @@ class Engine:
 
     def _cache_write(self, det_id: str, key: str, outcome: RawOutcome) -> None:
         try:
-            p = self._cache_dir() / f"{det_id}_{key}.json"
+            p = self._cache_dir() / f"{safe_filename(det_id)}_{key}.json"
             p.write_text(json.dumps(outcome.to_cache(), ensure_ascii=False),
                          encoding="utf-8")
         except Exception:
@@ -252,7 +299,8 @@ class Engine:
 
     # ---------------------------------------------------------- consensus --
 
-    def _consensus(self, results, segmentation) -> ConsensusResult:
+    def _consensus(self, results, segmentation,
+                   dets: dict[str, BaseDetector] | None = None) -> ConsensusResult:
         ok = [r for r in results if r.score is not None]
         notes: list[str] = []
         contributors: list[ConsensusEntry] = []
@@ -280,7 +328,9 @@ class Engine:
         if ok:
             weights = []
             for r in ok:
-                w = consensus_weight(r.calibration)
+                det = (dets or {}).get(r.detector_id)
+                w = (self.juror_weight(det, r.calibration) if det is not None
+                     else consensus_weight(r.calibration))
                 weights.append(w)
                 contributors.append(ConsensusEntry(
                     detector_id=r.detector_id, score=r.score,
@@ -361,27 +411,28 @@ UNCALIBRATED_WEIGHT = 0.5
 WEIGHT_SHRINK_N = 30       # samples at which the measured skill counts half
 
 
-def consensus_weight(cal) -> float:
+def consensus_weight(cal, prior: float = UNCALIBRATED_WEIGHT) -> float:
     """A juror's vote weight from its calibration record.
 
     Skill is the Gini coefficient 2·AUC−1 (0 = coin flip, 1 = perfect,
     threshold-free), falling back to 2·acc−1 when AUC is missing. Mapped to
-    [0.25, 2.0], then shrunk toward the uncalibrated weight by sample size so
-    a fit on a handful of texts can't dominate. An uncalibrated juror sits
-    at 0.5: below any calibrated juror with real skill, above a chance one.
+    [0.25, 2.0], then shrunk toward the juror's prior by sample size so a
+    fit on a handful of texts can't dominate. An uncalibrated juror gets its
+    prior: 0.5 by default (below any calibrated juror with real skill, above
+    a chance one); LLM judges start at 1.0 (`uncalibrated_weight`).
     """
     if cal is None or cal.status != "calibrated":
-        return UNCALIBRATED_WEIGHT
+        return prior
     if cal.auc is not None:
         skill = 2.0 * cal.auc - 1.0
     elif cal.accuracy is not None:
         skill = 2.0 * cal.accuracy - 1.0
     else:
-        return UNCALIBRATED_WEIGHT
+        return prior
     measured = 0.25 + 1.75 * max(0.0, min(1.0, skill))
     n = max(0, cal.n_samples or 0)
     k = n / (n + WEIGHT_SHRINK_N)
-    return (1.0 - k) * UNCALIBRATED_WEIGHT + k * measured
+    return (1.0 - k) * prior + k * measured
 
 
 class _ProviderProbe:
@@ -392,6 +443,9 @@ class _ProviderProbe:
 
     def build_all_enabled(self):
         return self._pm.build_all_enabled()
+
+    def build(self, pid: str):
+        return self._pm.build(pid)
 
 
 def _band(r) -> str:

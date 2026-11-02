@@ -165,6 +165,36 @@ def metrics(raws: list[float], labels: list[int], fit: dict) -> dict:
 
 # ---------------------------------------------------------------- store --
 
+def safe_filename(detector_id: str) -> str:
+    """Detector id -> file stem; juror ids like `llm_judge@deepseek:2` carry
+    characters Windows forbids in file names."""
+    return "".join("_" if c in '<>:"/\\|?*' else c for c in detector_id)
+
+
+def stratified_subset(samples: list[dict], n: int, seed: int = 7) -> list[dict]:
+    """Up to `n` samples, balanced across (language, label) cells.
+
+    Used for paid jurors (LLM APIs): 40 well-spread samples give a usable
+    fit for a fraction of the cost of the full set. Fixed seed, so reruns
+    hit the same texts (and the judge cache).
+    """
+    import random
+    if n <= 0 or n >= len(samples):
+        return list(samples)
+    cells: dict[tuple, list[dict]] = {}
+    for s in samples:
+        cells.setdefault((s.get("language", ""), s["label"]), []).append(s)
+    rng = random.Random(seed)
+    for pool in cells.values():
+        rng.shuffle(pool)
+    out: list[dict] = []
+    while len(out) < n and any(cells.values()):
+        for key in sorted(cells):
+            if cells[key] and len(out) < n:
+                out.append(cells[key].pop())
+    return out
+
+
 class CalibrationStore:
     """Directory-backed storage; doubles as the engine's fit provider."""
 
@@ -172,8 +202,7 @@ class CalibrationStore:
         self.root = root or cfg.subdir("calibration")
 
     def _path(self, detector_id: str) -> Path:
-        safe = detector_id.replace("/", "_")
-        return self.root / f"{safe}.json"
+        return self.root / f"{safe_filename(detector_id)}.json"
 
     def get(self, detector_id: str) -> dict | None:
         p = self._path(detector_id)
@@ -202,8 +231,17 @@ class CalibrationStore:
 
 
 async def calibrate_detector(detector, corpus: Corpus, *,
-                             max_chars: int = 4000) -> dict:
-    """Run one detector over a corpus, fit + metrics, store, return summary."""
+                             max_chars: int = 4000,
+                             max_samples: int | None = None,
+                             concurrency: int = 1,
+                             providers=None,
+                             det_settings: dict | None = None) -> dict:
+    """Run one detector over a corpus, fit + metrics, store, return summary.
+
+    `max_samples` takes a stratified subset (for paid API jurors);
+    `concurrency` > 1 overlaps network-bound detectors (keep 1 for local
+    models, which compete for the same CPU/GPU).
+    """
     import asyncio
 
     from .detectors.base import AnalysisContext, DetectorError
@@ -215,14 +253,17 @@ async def calibrate_detector(detector, corpus: Corpus, *,
     errors: list[str] = []
     skipped = 0
     # Calibration uses a minimal context: providers only needed by llm_judge
-    providers = ProviderManager()
-    det_settings = {}
+    providers = providers or ProviderManager()
+    det_settings = det_settings or {}
+    samples = stratified_subset(corpus.samples, max_samples or 0)
+    gate = asyncio.Semaphore(max(1, concurrency))
 
     class _Fits:
         def get(self, _):
             return None  # meaningful: calibration must NOT use existing fits
 
-    for i, sample in enumerate(corpus.samples):
+    async def one(sample: dict) -> None:
+        nonlocal skipped
         text = sample["text"][:max_chars]
         seg = segment_text(text)
         lang = sample.get("language") or detect_language(text)[0]
@@ -233,17 +274,20 @@ async def calibrate_detector(detector, corpus: Corpus, *,
         if detector.abstain_reason(ctx):
             # out-of-language samples would only teach the fit noise
             skipped += 1
-            continue
+            return
         try:
-            outcome = await detector.analyze(ctx)
+            async with gate:
+                outcome = await detector.analyze(ctx)
             if outcome.raw_score is None:
-                continue
+                return
             raws.append(float(outcome.raw_score))
             labels.append(sample["label"])
         except DetectorError as e:
             errors.append(str(e))
         except Exception as e:  # defensive: one bad sample must not kill the run
             errors.append(f"{type(e).__name__}: {e}")
+
+    await asyncio.gather(*(one(s) for s in samples))
 
     if len(raws) < 4 or len(set(labels)) < 2:
         return {"ok": False,

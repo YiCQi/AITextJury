@@ -111,7 +111,9 @@ export function VerdictPanel({ report, sample }:
           </table>
           <p className="hint">
             Weighted mean of the scores. Weight grows with a detector's measured
-            accuracy (AUC) on the calibration set; uncalibrated detectors count 0.5.
+            accuracy (AUC) on the calibration set; uncalibrated detectors count
+            0.5 (LLM jurors 1.0). Adjust any juror's multiplier on the
+            Calibration tab.
           </p>
         </details>
       )}

@@ -164,6 +164,12 @@ export interface CalibrationFitPublic {
   reason?: string;
   ok?: boolean;
   errors?: string[];
+  /** GET /calibration only: juror display name, family, consensus weight */
+  name?: string;
+  family?: string;
+  weight?: number;
+  /** the user's `weight` multiplier from detector settings (default 1) */
+  multiplier?: number;
 }
 
 export interface Settings {

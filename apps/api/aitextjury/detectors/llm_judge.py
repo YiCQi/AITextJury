@@ -10,10 +10,13 @@ Anti-hallucination guardrails:
 * parse failure -> DetectorError with the raw tail attached (never a fake 0.5);
 * verdict mapping is documented here and mirrored in the UI.
 
-Selecting the provider: detector settings `provider_id` (e.g. "openai",
-"deepseek:fast", "ollama", "gemini") — configured in the Providers tab;
-if absent, the first enabled provider is used. `model` overrides the
-provider default.
+Selecting the provider: the engine creates one judge per enabled provider
+(`llm_judge@<provider id>`, e.g. `llm_judge@deepseek`), so several APIs sit
+on the jury side by side, each with its own calibration and vote. The bare
+`llm_judge` is the unbound template: it uses detector setting `provider_id`
+or, failing that, the first enabled provider. `model` overrides the
+provider default (settings under `llm_judge` apply to every judge; settings
+under `llm_judge@<id>` override them for that one).
 
 Cost note: the judge prompt is capped at ~9k chars of text. Enable caching
 (default on) so _re-analyzing identical text never re-bills your key.
@@ -73,7 +76,14 @@ class LLMJudgeDetector(BaseDetector):
     default_enabled = False
     heavy = False
     recommended = True                 # strongest judge; panel lists it first
+    uncalibrated_weight = 1.0          # reads the whole text: trusted above 0.5
     DEFAULT_BANDS = (0.5, 0.18)   # the raw is already a probability
+
+    def __init__(self, provider_id: str = "", label: str = ""):
+        self.provider_id = provider_id
+        if provider_id:
+            self.id = f"{LLMJudgeDetector.id}@{provider_id}"
+            self.name = f"LLM Judge · {label or provider_id}"
 
     def raw_direction(self) -> str:
         return "higher_is_ai"
@@ -82,7 +92,7 @@ class LLMJudgeDetector(BaseDetector):
 
     def _pick_provider(self, ctx: AnalysisContext):
         settings = ctx.det_settings(self.id)
-        pid = settings.get("provider_id", "")
+        pid = self.provider_id or settings.get("provider_id", "")
         if pid:
             prov = ctx.providers.build(pid)
             if prov is None:
@@ -100,6 +110,11 @@ class LLMJudgeDetector(BaseDetector):
             return Availability(ok=True, reason="needs any enabled provider")
         # accept both a full AnalysisContext and lightweight probe objects
         providers = getattr(ctx, "providers", None) or ctx
+        if self.provider_id and providers and hasattr(providers, "build"):
+            if providers.build(self.provider_id) is None:
+                return Availability(ok=False, reason=(
+                    f"provider '{self.provider_id}' is no longer configured"))
+            return Availability(ok=True)
         if not providers or not providers.build_all_enabled():
             return Availability(
                 ok=False,

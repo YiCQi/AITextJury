@@ -81,6 +81,7 @@ The other tabs:
 
 * **Providers** — paste any OpenAI-compatible or Gemini key (DeepSeek,
   OpenRouter, local Ollama — even keyless) to enable the **LLM Judge**.
+  Add several and each one judges independently, side by side.
   Keys stay in the local `data/providers.json`, masked on screen.
 * **Calibration** — hit **Recalibrate** on the built-in `hc3` set (200
   real human vs ChatGPT answers, English + Chinese), or drop your own
