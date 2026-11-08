@@ -419,8 +419,9 @@ class Engine:
                 for c in contributors:
                     c.weight = round(coefs.get(c.detector_id, 0.0), 3)
                 if evidence["excluded"]:
-                    notes.append("not in the statistical fusion (no calibration "
-                                 "scores yet - recalibrate): "
+                    notes.append("not in the statistical fusion (no or too few "
+                                 "labeled calibration rows - recalibrate, or "
+                                 "the detector rarely scores the bench): "
                                  + ", ".join(evidence["excluded"]))
             elif any(r.calibration.status == "calibrated" for r in ok):
                 notes.append("statistical fusion unavailable - recalibrate on a "
@@ -464,6 +465,16 @@ class Engine:
             contributors=contributors, segment_scores=seg_scores,
             notes=notes, method=method, evidence=evidence)
 
+    def _calib_rows(self, det_id: str) -> int:
+        """Labeled rows behind a detector, counting only its minority class."""
+        best = 0
+        for ds in self.calibration.scores.datasets():
+            data = self.calibration.scores.load(ds)
+            col = data["scores"].get(det_id, {})
+            labels = [data["samples"][k]["label"] for k in col if k in data["samples"]]
+            best = max(best, min(labels.count(0), labels.count(1)))
+        return best
+
     def _stacked(self, ok, dets: dict[str, BaseDetector]):
         """Fused P(AI) + interval + conformal verdict, or None."""
         store = self.calibration.scores
@@ -477,10 +488,18 @@ class Engine:
             if muted or r.raw_score is None:
                 continue
             (members if r.detector_id in have else excluded).append(r)
-        if not members:
-            return None
-        ids = sorted(r.detector_id for r in members)
-        fusion = self._fusion_for(ids)
+        # A detector with few calibration rows (e.g. one that only scores
+        # multi-paragraph texts) shrinks the shared rows below what a fit
+        # needs; drop the thinnest member until the rest can be fused.
+        fusion = None
+        while members:
+            ids = sorted(r.detector_id for r in members)
+            fusion = self._fusion_for(ids)
+            if fusion is not None:
+                break
+            thinnest = min(members, key=lambda r: self._calib_rows(r.detector_id))
+            members.remove(thinnest)
+            excluded.append(thinnest)
         if fusion is None:
             return None
         raw = {r.detector_id: r.raw_score for r in members}

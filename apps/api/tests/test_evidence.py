@@ -111,3 +111,22 @@ def test_bench_texts_are_unique():
     """Duplicates would leak across CV folds and inflate n."""
     texts = [s["text"] for s in all_corpora()["hc3"].samples]
     assert len(texts) == len(set(texts))
+
+
+def test_thin_detector_is_dropped_not_fatal(tmp_path):
+    """One detector with ~no human rows must not switch the fusion off."""
+    engine = _engine(tmp_path)
+    (tmp_path / "calib").mkdir()
+    corpus = all_corpora()["hc3"]
+    for det_id in ("stylometry", "length_rhythm"):
+        fit = asyncio.run(calibrate_detector(engine.registry.get(det_id), corpus,
+                                             providers=engine.providers))
+        if fit["ok"]:
+            engine.calibration.put(det_id, fit["fit"])
+        engine.calibration.scores.put("hc3", det_id, fit.get("records", []))
+    text = next(s["text"] for s in corpus.samples
+                if s["label"] == 1 and s["language"] == "en" and s["text"].count("\n\n") >= 2)
+    c = asyncio.run(engine.analyze(text, ["stylometry", "length_rhythm"])).consensus
+    assert c.method == "stacked"
+    assert c.evidence["members"] == ["stylometry"]
+    assert any("Length Rhythm" in name for name in c.evidence["excluded"])

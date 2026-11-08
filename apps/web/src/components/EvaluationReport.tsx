@@ -58,7 +58,15 @@ export function EvaluationReport({ dataset, version }: { dataset: string; versio
             {rows.map((r) => (
               <tr key={r.detector_id + r.language}
                 className={`eval-row${r.detector_id === "fusion" ? " fusion" : ""}`}>
-                <td title={r.members?.join(", ")}>{r.name}</td>
+                <td title={r.members?.join(", ")}>
+                  {r.name}
+                  {r.unreliable && (
+                    <span className="chip warn" style={{ marginLeft: 6 }}
+                      title={`only ${Math.min(r.n_human, r.n - r.n_human)} labeled rows in one class — this detector rarely produces a score on the bench, so its metrics are not meaningful`}>
+                      too few samples
+                    </span>
+                  )}
+                </td>
                 <td className="num">{r.n}</td>
                 <td className="num">
                   {r.auroc.toFixed(3)}{" "}

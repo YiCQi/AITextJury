@@ -229,6 +229,8 @@ export interface EvaluationRow {
   fpr_resolution: number | null;
   ece?: number;
   members?: string[];
+  /** fewer than 10 labeled rows in a class: the metrics mean little */
+  unreliable?: boolean;
 }
 
 export interface EvaluationReport {

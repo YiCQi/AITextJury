@@ -32,6 +32,7 @@ MIN_ROWS = 20          # fewer shared calibration rows -> no fusion
 MIN_PER_CLASS = 8
 BOOTSTRAPS = 200
 CV_FOLDS = 5
+RELIABLE_PER_CLASS = 10   # fewer labeled rows in a class -> metrics flagged
 
 
 def sample_key(text: str) -> str:
@@ -352,7 +353,7 @@ def evaluate(store: ScoreStore, dataset: str, fits: dict[str, dict],
         X, y, _ = m
         if len(y) < MIN_ROWS or min(np.sum(y == 0), np.sum(y == 1)) < MIN_PER_CLASS:
             continue
-        row = _metrics_row("fusion", f"Jury fusion ({len(covering)} detectors, CV)",
+        row = _metrics_row("fusion", f"Jury fusion ({len(covering)} detector{'s' if len(covering) > 1 else ''}, CV)",
                            lang, oof_predictions(X, y), y)
         if row:
             row["members"] = covering
@@ -372,8 +373,12 @@ def _metrics_row(det_id, name, lang, s, y) -> dict | None:
         return None
     ci = auroc_ci(s, y, b=500)
     t1, t5 = tpr_at_fpr(s, y, 0.01), tpr_at_fpr(s, y, 0.05)
+    minority = int(min(np.sum(y == 0), np.sum(y == 1)))
     return {"detector_id": det_id, "name": name, "language": lang or "all",
             "n": int(len(y)), "n_human": int(np.sum(y == 0)),
+            # e.g. a detector that only scores multi-paragraph texts: its
+            # failures pick the samples, so a high AUROC here means nothing
+            "unreliable": minority < RELIABLE_PER_CLASS,
             "auroc": a, "auroc_ci": list(ci) if ci else None,
             "tpr_at_1fpr": t1["tpr"] if t1 else None,
             "tpr_at_5fpr": t5["tpr"] if t5 else None,
