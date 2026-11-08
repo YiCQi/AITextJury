@@ -199,7 +199,10 @@ class CalibrationStore:
     """Directory-backed storage; doubles as the engine's fit provider."""
 
     def __init__(self, root: Path | None = None):
+        from .evidence import ScoreStore
         self.root = root or cfg.subdir("calibration")
+        # per-sample raw scores behind each fit (fusion, p-values, evaluation)
+        self.scores = ScoreStore(self.root / "scores")
 
     def _path(self, detector_id: str) -> Path:
         return self.root / f"{safe_filename(detector_id)}.json"
@@ -249,7 +252,10 @@ async def calibrate_detector(detector, corpus: Corpus, *,
     from .segmenter import segment_text
     from .utils import detect_language
 
+    from .evidence import sample_key
+
     raws, labels = [], []
+    records: list[dict] = []
     errors: list[str] = []
     skipped = 0
     # Calibration uses a minimal context: providers only needed by llm_judge
@@ -282,6 +288,8 @@ async def calibrate_detector(detector, corpus: Corpus, *,
                 return
             raws.append(float(outcome.raw_score))
             labels.append(sample["label"])
+            records.append({"key": sample_key(text), "raw": float(outcome.raw_score),
+                            "label": sample["label"], "language": lang})
         except DetectorError as e:
             errors.append(str(e))
         except Exception as e:  # defensive: one bad sample must not kill the run
@@ -304,7 +312,7 @@ async def calibrate_detector(detector, corpus: Corpus, *,
         **{k: v for k, v in m.items() if k != "threshold"},
         "threshold": m["threshold"],
     })
-    return {"ok": True, "fit": fit, "errors": errors[:5]}
+    return {"ok": True, "fit": fit, "errors": errors[:5], "records": records}
 
 
 def fit_to_public(fit: dict) -> dict:

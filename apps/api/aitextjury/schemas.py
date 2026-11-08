@@ -26,6 +26,7 @@ class Verdict(str, Enum):
     likely_ai = "likely_ai"
     likely_human = "likely_human"
     uncertain = "uncertain"
+    insufficient = "insufficient"      # too little text to say anything
 
 
 class DetectorFamily(str, Enum):
@@ -96,6 +97,9 @@ class DetectorResult(BaseModel):
     runtime_ms: int = 0
     model: Optional[str] = None
     error: Optional[str] = None
+    # where this text falls among the human calibration texts:
+    # {dataset, language, n_human, more_ai_than (fraction), p_human}
+    reference: Optional[dict[str, Any]] = None
 
 
 class ConsensusEntry(BaseModel):
@@ -113,6 +117,12 @@ class ConsensusResult(BaseModel):
     contributors: list[ConsensusEntry] = Field(default_factory=list)
     segment_scores: list[SegmentScore] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    # "stacked": calibrated fusion with error-rate control (see evidence.py);
+    # "weighted": heuristic weighted mean (no per-sample calibration data yet)
+    method: str = "weighted"
+    # stacked only: {interval, p_human, p_ai, alpha, n_human, n_ai, dataset,
+    #                n_train, cv_auroc, cv_tpr, members, excluded}
+    evidence: Optional[dict[str, Any]] = None
 
 
 class TextStats(BaseModel):

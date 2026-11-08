@@ -43,11 +43,15 @@
    detector's stored calibration fit (or documented `DEFAULT_BANDS`), picks
    the verdict against the calibrated threshold, attaches calibration
    metrics, and converts per-segment raw values into `SegmentScore`s.
-5. **Consensus** (meta detector): weighted mean of scores (weight from
-   calibration skill 2·AUC−1, shrunk toward 0.5 by sample size; an
-   uncalibrated detector gets 0.5; detectors that *abstain* — e.g.
-   English-only LMs on Chinese — are left out), pairwise verdict agreement,
-   cross-detector
+5. **Consensus** (meta detector): when calibration runs have stored
+   per-sample scores (`data/calibration/scores/<dataset>.json`), a stacked
+   logistic fusion of the detectors that scored the text, with a bootstrap
+   90% interval and a conformal verdict (`evidence.py`: "AI" only if
+   p_human <= `fpr_target`); otherwise a weighted mean (weight from
+   calibration skill 2·AUC−1, shrunk toward the juror's prior by sample
+   size). Detectors that *abstain* — e.g. English-only LMs on Chinese — are
+   left out; texts under `min_words` get no verdict. Plus pairwise verdict
+   agreement, cross-detector
    sentence-average heatmap, explicit notes (uncalibrated detectors, single
    coverage, high disagreement…).
 6. **History & cache**: reports to `data/history/<id>.json` (+ manifest,

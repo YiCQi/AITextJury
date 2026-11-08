@@ -22,6 +22,7 @@ Endpoints (all JSON, all prefixed /api):
   PUT  /settings                   — update settings (persisted locally)
   GET  /calibration                — stored calibration fits
   POST /calibration/run            — recalibrate detectors on a labeled set
+  GET  /evaluation                 — AUROC/TPR@FPR report from stored calibration scores
   GET  /bench                      — labeled corpora (built-in demo/hc3 + user JSONL)
   GET  /sample                     — one random labeled text to try (hc3 by default)
 """
@@ -44,6 +45,7 @@ from .calibration import (CalibrationStore, all_corpora, calibrate_detector,
 from .detectors import DetectorRegistry, build_default_registry
 from .detectors.lm_common import ml_status
 from .engine import Engine
+from .evidence import evaluate
 from .history import HistoryStore
 from .providers.manager import ProviderManager
 from .schemas import (AnalyzeRequest, AnalyzeReport, Availability,
@@ -285,6 +287,17 @@ def build_app(world: World | None = None) -> FastAPI:
             out[det.id] = pub
         return {"calibration": out}
 
+    @app.get("/api/evaluation")
+    def evaluation(dataset: str = "hc3"):
+        """AUROC (95 % CI), TPR at 1 % / 5 % FPR and ECE per detector and per
+        language, plus the cross-validated jury fusion — from the per-sample
+        scores stored by the last calibration runs on `dataset`."""
+        w: World = app.state.world
+        jurors = w.engine.jurors()
+        return evaluate(w.calibration.scores, dataset,
+                        fits={d.id: w.calibration.get(d.id) for d in jurors},
+                        names={d.id: d.name for d in jurors})
+
     @app.post("/api/calibration/run")
     async def calibration_run(req: CalibrationRunRequest):
         w: World = app.state.world
@@ -318,6 +331,7 @@ def build_app(world: World | None = None) -> FastAPI:
                 fit = {"ok": False, "reason": f"{type(e).__name__}: {e}"}
             if fit.get("ok") and fit.get("fit"):
                 w.calibration.put(det_id, fit["fit"])
+                w.calibration.scores.put(corpus.name, det_id, fit.get("records", []))
                 pub = fit_to_public(fit["fit"])
                 pub["ok"] = True
                 pub["errors"] = fit.get("errors", [])

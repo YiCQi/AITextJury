@@ -1,5 +1,5 @@
 import type {
-  AnalyzeReport, BenchDataset, CalibrationFitPublic, DetectorInfo,
+  AnalyzeReport, BenchDataset, CalibrationFitPublic, DetectorInfo, EvaluationReport,
   HistoryEntry, PublicProvider, ProviderTemplate, Settings,
 } from "./types";
 
@@ -63,6 +63,10 @@ export const fetchSettings = () => getJSON<{
 export const fetchCalibration = () => getJSON<{
   calibration: Record<string, CalibrationFitPublic>;
 }>("/calibration");
+
+/** AUROC (95% CI) / TPR@FPR per detector + CV jury fusion, from stored calibration scores. */
+export const fetchEvaluation = (dataset: string) =>
+  getJSON<EvaluationReport>(`/evaluation?dataset=${encodeURIComponent(dataset)}`);
 
 export const fetchBench = () => getJSON<{ datasets: BenchDataset[] }>("/bench");
 

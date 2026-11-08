@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchBench, fetchCalibration, fetchSettings, runCalibration, saveSettings } from "../api";
 import type { BenchDataset, CalibrationFitPublic, Settings } from "../types";
 import { fmtPct } from "../util";
+import { EvaluationReport } from "./EvaluationReport";
 
 const JUDGE_SAMPLES = 40;
 
@@ -20,6 +21,7 @@ export function CalibrationView() {
   const [busy, setBusy] = useState<string | null>(null);
   const [lastRun, setLastRun] = useState<Record<string, CalibrationFitPublic> | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [runs, setRuns] = useState(0);     // bumps the evaluation report
 
   const refresh = async () => {
     try {
@@ -44,6 +46,7 @@ export function CalibrationView() {
     try {
       const r = await runCalibration(ids, dataset, maxSamples);
       setLastRun(r.results);
+      setRuns((n) => n + 1);
       await refresh();
     } catch (e) {
       setErr(String(e));
@@ -207,9 +210,13 @@ export function CalibrationView() {
           toward the juror's default when the fit used few samples) × your
           multiplier. Defaults while uncalibrated: 0.5, LLM jurors 1.0. A
           multiplier set on <code>llm_judge</code> in settings applies to every
-          LLM juror. ECE = expected calibration error; lower is better.
+          LLM juror. ECE = expected calibration error; lower is better. Once
+          per-sample scores are stored, the verdict itself uses the
+          statistical fusion instead (see the report below).
         </p>
       </div>
+
+      <EvaluationReport dataset={dataset} version={runs} />
     </div>
   );
 }

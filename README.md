@@ -140,6 +140,31 @@ shrunk toward a neutral weight when the fit used few samples). The bundled
 `hc3` set (see `apps/api/aitextjury/bench/README.md`) is a reasonable
 start; calibrate on data from your own domain for real use.
 
+### From scores to a verdict you can defend
+
+Asking a chatbot "was this written by AI?" gives an answer with no error
+rate. Here, every calibration run also stores each detector's score on every
+labeled sample, and the verdict is built from those rows
+(`apps/api/aitextjury/evidence.py`):
+
+* **Statistical fusion** — a ridge logistic regression over the detectors
+  that scored the text, trained on the calibration rows they share (no
+  hand-tuned weights), cached per detector combination.
+* **Uncertainty** — the fusion is refit on 200 bootstrap resamples; the
+  report shows a 90% interval around P(AI).
+* **Error-rate control** — *likely AI* is only claimed when at most α
+  (default 5%, setting `detect.fpr_target`) of the human calibration texts
+  score as high (a conformal p-value against out-of-fold scores); *likely
+  human* symmetrically against the AI texts; otherwise *inconclusive*.
+* **No verdict on thin evidence** — below `detect.min_words` (40; two CJK
+  characters count as one word) the result is *not enough text to judge*.
+* **Evaluation report** (Calibration tab, `GET /api/evaluation`) — AUROC
+  with 95% bootstrap CI, TPR at 1% / 5% FPR and ECE per detector and per
+  language, plus the cross-validated jury fusion.
+
+Each detector card also says where the text falls among the human
+calibration texts ("more AI-like than 92% of 100 human texts").
+
 The GPT-2-based detectors (perplexity, Fast-DetectGPT, Binoculars)
 **abstain** on mostly-Chinese text — GPT-2 is English-only, so its numbers
 would be noise. Configure a multilingual model in their detector settings

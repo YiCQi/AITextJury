@@ -30,7 +30,9 @@ licenses).
 
 Changes from the original: answers were whitespace-normalized; one human
 and one ChatGPT answer were taken per question (length 250–2500 chars for
-English, 120–2000 for Chinese), sampled with a fixed seed. As an adaptation
+English, 120–2000 for Chinese), sampled with a fixed seed; two human answers that HC3 repeats across
+questions were swapped for other unique `finance` human answers, so every
+text is distinct (duplicates would leak across CV folds). As an adaptation
 of CC-BY-SA material, this file is distributed under **CC-BY-SA-4.0**
 (<https://creativecommons.org/licenses/by-sa/4.0/>), separately from the
 MIT-licensed code.

@@ -59,6 +59,16 @@ export function DetectorCard({ result }:{ result: DetectorResult }) {
                 : "uncalibrated — default bands"}
             </span>
           </div>
+          {result.reference && (
+            <div title={`conformal p = ${result.reference.p_human} vs ${result.reference.n_human} human texts (${result.reference.dataset}, ${result.reference.language})`}>
+              more AI-like than{" "}
+              <b style={{ color: "var(--text)" }}>
+                {(result.reference.more_ai_than * 100).toFixed(0)}%
+              </b>{" "}
+              of {result.reference.n_human} human texts
+              {result.reference.language !== "all" ? ` (${result.reference.language})` : ""}
+            </div>
+          )}
           <div>{result.runtime_ms} ms · {result.segment_scores.length} segments scored</div>
           {result.link && (
             <div>

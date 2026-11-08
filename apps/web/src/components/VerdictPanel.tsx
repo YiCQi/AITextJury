@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AnalyzeReport } from "../types";
+import type { AnalyzeReport, ConsensusEvidence } from "../types";
 import type { SampleText } from "../api";
 import { Gauge } from "./Gauge";
 import { textSize, VERDICT_HEADLINE, VERDICT_LABEL, verdictClass } from "../util";
@@ -21,15 +21,22 @@ export function VerdictPanel({ report, sample }:
   const abstained = report.results.filter((r) => r.error?.startsWith("abstained: ")).length;
   const failed = report.results.filter((r) => r.error && !r.error.startsWith("abstained: ")).length;
 
+  const ev = c.method === "stacked" ? c.evidence ?? null : null;
   const subline = c.contributors.length === 0
     ? "No detector produced a score."
-    : c.verdict === "uncertain"
-      ? `The detectors don't agree clearly (score ${c.score.toFixed(2)}).`
-      : `${agreeing} of ${c.contributors.length} detector${c.contributors.length > 1 ? "s" : ""} point this way · score ${c.score.toFixed(2)}`;
+    : c.verdict === "insufficient"
+      ? "Below ~40 words, detector scores are too noisy for a verdict either way."
+      : ev
+        ? `P(AI) ${c.score.toFixed(2)} · 90% interval ${ev.interval[0].toFixed(2)}–${ev.interval[1].toFixed(2)}`
+        : c.verdict === "uncertain"
+          ? `The detectors don't agree clearly (score ${c.score.toFixed(2)}).`
+          : `${agreeing} of ${c.contributors.length} detector${c.contributors.length > 1 ? "s" : ""} point this way · score ${c.score.toFixed(2)}`;
+  const statement = ev ? evidenceStatement(c.verdict, ev) : null;
 
   const copySummary = async () => {
     const lines = [
       `AITextJury: ${VERDICT_HEADLINE[c.verdict]} (score ${c.score.toFixed(2)}, agreement ${(c.agreement * 100).toFixed(0)}%)`,
+      ...(ev ? [`${subline}`, statement ?? "", methodLine(ev)] : []),
       ...report.results.map((r) => r.score != null
         ? `- ${r.name}: ${r.score.toFixed(2)} (${VERDICT_LABEL[r.verdict ?? "uncertain"]})`
         : `- ${r.name}: ${r.error}`),
@@ -58,6 +65,7 @@ export function VerdictPanel({ report, sample }:
         <div style={{ flex: 1, minWidth: 220 }}>
           <div className="verdict-headline">{VERDICT_HEADLINE[c.verdict]}</div>
           <div className="verdict-sub">{subline}</div>
+          {statement && <div className="verdict-stat">{statement}</div>}
           <div className="verdict-meta">
             {report.stats.language === "zh" ? "Chinese" : report.stats.language === "en" ? "English" : report.stats.language}
             {" · "}{textSize(report.text).label}
@@ -95,7 +103,8 @@ export function VerdictPanel({ report, sample }:
           <summary>how this score was computed</summary>
           <table className="flat" style={{ marginTop: 6 }}>
             <thead>
-              <tr><th>detector</th><th>score</th><th>vote</th><th>weight</th><th>calibration</th></tr>
+              <tr><th>detector</th><th>score</th><th>vote</th>
+                <th>{ev ? "coefficient" : "weight"}</th><th>calibration</th></tr>
             </thead>
             <tbody>
               {c.contributors.map((e) => (
@@ -110,13 +119,51 @@ export function VerdictPanel({ report, sample }:
             </tbody>
           </table>
           <p className="hint">
-            Weighted mean of the scores. Weight grows with a detector's measured
-            accuracy (AUC) on the calibration set; uncalibrated detectors count
-            0.5 (LLM jurors 1.0). Adjust any juror's multiplier on the
-            Calibration tab.
+            {ev ? (
+              <>
+                {methodLine(ev)} The verdict rule is a conformal test: “AI” only
+                when at most {pct(ev.alpha)} of human calibration texts score this
+                high, “human” only when at most {pct(ev.alpha)} of AI texts score
+                this low; otherwise inconclusive. Coefficients are the fusion's
+                standardized log-odds weights (muted jurors are left out).
+              </>
+            ) : (
+              <>
+                Heuristic weighted mean: weight grows with a detector's measured
+                accuracy (AUC); uncalibrated detectors count 0.5 (LLM jurors 1.0).
+                Recalibrate on a labeled set to switch to statistical fusion with
+                error-rate control.
+              </>
+            )}
           </p>
         </details>
       )}
     </div>
   );
+}
+
+const pct = (v: number) => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`;
+
+/** "k of n" back from a conformal p = (1 + k) / (n + 1). */
+const countFrom = (p: number, n: number) => Math.max(0, Math.round(p * (n + 1) - 1));
+
+/** The sentence an expert would put in a report — what the p-values mean. */
+function evidenceStatement(verdict: string, ev: ConsensusEvidence): string {
+  const kh = countFrom(ev.p_human, ev.n_human);
+  const ka = countFrom(ev.p_ai, ev.n_ai);
+  if (verdict === "likely_ai") {
+    return `Only ${kh} of ${ev.n_human} human-written calibration texts score this high (p = ${ev.p_human.toFixed(3)} ≤ ${ev.alpha}).`;
+  }
+  if (verdict === "likely_human") {
+    return `Only ${ka} of ${ev.n_ai} AI-generated calibration texts score this low (p = ${ev.p_ai.toFixed(3)} ≤ ${ev.alpha}).`;
+  }
+  return `Not unusual for either side: ${kh} of ${ev.n_human} human texts score at least this high and ${ka} of ${ev.n_ai} AI texts at most this low (a verdict needs p ≤ ${ev.alpha}).`;
+}
+
+function methodLine(ev: ConsensusEvidence): string {
+  const auc = ev.cv_auroc != null ? `cross-validated AUROC ${ev.cv_auroc.toFixed(2)}` : "";
+  const tpr = ev.cv_tpr != null
+    ? `, catches ${pct(ev.cv_tpr)} of AI texts at ≤${pct(ev.alpha)} false positives`
+    : "";
+  return `Statistical fusion of ${ev.members.length} detector${ev.members.length > 1 ? "s" : ""}, trained on ${ev.dataset} (n = ${ev.n_train}); ${auc}${tpr}.`;
 }

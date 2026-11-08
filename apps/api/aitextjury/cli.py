@@ -99,6 +99,7 @@ def cmd_calibrate(args) -> int:
             det_settings={det_id: w.engine.detector_eff(det_id)}))
         if fit.get("ok"):
             w.calibration.put(det_id, fit["fit"])
+            w.calibration.scores.put(corpus.name, det_id, fit.get("records", []))
             m = fit["fit"]
             print(f"  auc={m['auc']:.3f}  acc={m['acc']:.3f}  "
                   f"ece={m['ece']:.3f}  thr={m['threshold']:.2f}")

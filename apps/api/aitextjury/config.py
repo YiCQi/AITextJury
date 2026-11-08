@@ -98,6 +98,11 @@ DEFAULT_SETTINGS: dict = {
         # per-call timeouts (seconds)
         "timeout_local": 90,
         "timeout_llm": 120,
+        # verdict rule: claim "AI" only when the text scores above all but
+        # this fraction of human calibration texts (conformal p-value)
+        "fpr_target": 0.05,
+        # below this many words (CJK: 2 characters count as one) -> no verdict
+        "min_words": 40,
         "max_text_chars": 60000,
         "max_history": 100,
         "cache_enabled": True,

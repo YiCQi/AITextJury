@@ -204,6 +204,17 @@ details.raw pre {
 .verdict.ai .verdict-headline { color: var(--ai); }
 .verdict.human .verdict-headline { color: var(--human); }
 .verdict-sub { color: var(--text-dim); margin-top: 2px; }
+.verdict-stat {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text);
+  padding: 6px 10px;
+  background: var(--bg-soft);
+  border-radius: 7px;
+  border: 1px solid var(--line-soft);
+}
+.eval-row.fusion td { background: var(--accent-tint); font-weight: 600; }
+.eval-ci { color: var(--text-faint); font-size: 11.5px; }
 .verdict-meta { color: var(--text-faint); font-size: 12px; margin-top: 6px; }
 .verdict-actions { display: flex; flex-direction: column; gap: 6px; align-self: flex-start; }
 .truth {

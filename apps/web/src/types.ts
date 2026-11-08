@@ -1,6 +1,6 @@
 // Types mirroring apps/api/aitextjury/schemas.py — keep in sync.
 
-export type Verdict = "likely_ai" | "likely_human" | "uncertain";
+export type Verdict = "likely_ai" | "likely_human" | "uncertain" | "insufficient";
 
 export type DetectorFamily =
   | "stylometry" | "local_lm" | "classifier" | "byok_llm" | "plugin" | "meta";
@@ -79,6 +79,11 @@ export interface DetectorResult {
   runtime_ms: number;
   model: string | null;
   error: string | null;
+  /** where this score falls among the human calibration texts */
+  reference?: {
+    dataset: string; language: string; n_human: number;
+    more_ai_than: number; p_human: number;
+  } | null;
 }
 
 export interface ConsensusEntry {
@@ -96,6 +101,9 @@ export interface ConsensusResult {
   contributors: ConsensusEntry[];
   segment_scores: SegmentScore[];
   notes: string[];
+  /** "stacked" = calibrated fusion with error-rate control; "weighted" = heuristic */
+  method?: "stacked" | "weighted";
+  evidence?: ConsensusEvidence | null;
 }
 
 export interface TextStats {
@@ -190,4 +198,42 @@ export interface BenchDataset {
   n: number;
   labels: { ai: number; human: number };
   where: string;
+}
+
+export interface ConsensusEvidence {
+  interval: [number, number];
+  p_human: number;
+  p_ai: number;
+  alpha: number;
+  dataset: string;
+  n_train: number;
+  n_human: number;
+  n_ai: number;
+  cv_auroc: number | null;
+  cv_tpr: number | null;
+  cv_fpr: number | null;
+  members: string[];
+  excluded: string[];
+}
+
+export interface EvaluationRow {
+  detector_id: string;
+  name: string;
+  language: string;
+  n: number;
+  n_human: number;
+  auroc: number;
+  auroc_ci: [number, number] | null;
+  tpr_at_1fpr: number | null;
+  tpr_at_5fpr: number | null;
+  fpr_resolution: number | null;
+  ece?: number;
+  members?: string[];
+}
+
+export interface EvaluationReport {
+  dataset: string;
+  n_samples: number;
+  languages: string[];
+  rows: EvaluationRow[];
 }

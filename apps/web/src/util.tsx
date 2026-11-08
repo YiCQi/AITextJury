@@ -36,6 +36,7 @@ export const VERDICT_LABEL: Record<string, string> = {
   likely_ai: "likely AI",
   likely_human: "likely human",
   uncertain: "uncertain",
+  insufficient: "too short",
 };
 
 export function fmtPct(v: number | null | undefined, digits = 0): string {
@@ -84,7 +85,7 @@ export function textSize(text: string): { cjk: number; words: number; label: str
 /** True when the text is too short for any detector to say much. */
 export function isTooShort(text: string): boolean {
   const { cjk, words } = textSize(text);
-  return cjk + words < 60 && !(cjk >= 100);
+  return words + cjk / 2 < 40;   // same rule as the server (detect.min_words)
 }
 
 // ------------------------------------------------------ detector helpers --
@@ -112,4 +113,5 @@ export const VERDICT_HEADLINE: Record<string, string> = {
   likely_ai: "Likely AI-generated",
   likely_human: "Likely human-written",
   uncertain: "Inconclusive",
+  insufficient: "Not enough text to judge",
 };

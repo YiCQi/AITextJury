@@ -24,11 +24,12 @@ import uuid
 from datetime import datetime, timezone
 
 from . import config as cfg
-from .calibration import CalibrationStore, safe_filename
+from .calibration import CalibrationStore, apply_fit, safe_filename
 from .detectors.base import ABSTAIN_PREFIX, AnalysisContext, BaseDetector, \
     DetectorError, RawOutcome
 from .detectors import DetectorRegistry
 from .detectors.llm_judge import LLMJudgeDetector
+from .evidence import build_fusion, conformal_p
 from .providers.manager import ProviderManager
 from .schemas import (AnalyzeReport, ConsensusEntry, ConsensusResult,
                       EvidenceItem, HistoryEntry, SegmentScore, TextStats,
@@ -60,6 +61,7 @@ class Engine:
         self.settings = (settings or {}).get("detect", {}) or {}
         self.detector_settings = (settings or {}).get("detectors", {}) or {}
         self.history = history_store
+        self._fusions: dict[tuple, object] = {}    # (ids, store version) -> Fusion
 
     # ------------------------------------------------------------- settings
 
@@ -197,9 +199,11 @@ class Engine:
         for det, (outcome, runtime_ms, error) in zip(chosen, raw_results):
             results.append(det.finalize(outcome, ctx, segmentation,
                                         runtime_ms, error))
+        self._attach_references(results, lang)
 
         consensus = self._consensus(results, segmentation,
-                                    {d.id: d for d in chosen})
+                                    {d.id: d for d in chosen},
+                                    evidence_units(text))
 
         report = AnalyzeReport(
             id=uuid.uuid4().hex[:12],
@@ -299,8 +303,47 @@ class Engine:
 
     # ---------------------------------------------------------- consensus --
 
+    # ------------------------------------------------------- statistics --
+
+    def _attach_references(self, results, language: str) -> None:
+        """Place each detector's score among the human calibration texts
+        (same language when there are enough of them)."""
+        store = self.calibration.scores
+        loaded: dict[str, dict] = {}
+        for r in results:
+            fit = self.calibration.get(r.detector_id)
+            if r.raw_score is None or not fit:
+                continue
+            ds = fit.get("dataset", "")
+            data = loaded.setdefault(ds, store.load(ds))
+            col = data["scores"].get(r.detector_id)
+            if not col:
+                continue
+            humans = [(k, raw) for k, raw in col.items()
+                      if data["samples"].get(k, {}).get("label") == 0]
+            same = [raw for k, raw in humans
+                    if data["samples"][k].get("language") == language]
+            ref_lang = language if len(same) >= 20 else "all"
+            raws = same if ref_lang != "all" else [raw for _, raw in humans]
+            if len(raws) < 10:
+                continue
+            ref = [apply_fit(fit, x) for x in raws]
+            p = apply_fit(fit, r.raw_score)
+            r.reference = {
+                "dataset": ds, "language": ref_lang, "n_human": len(ref),
+                "more_ai_than": sum(1 for x in ref if x < p) / len(ref),
+                "p_human": round(conformal_p(ref, p, upper=True), 4)}
+
+    def _fusion_for(self, det_ids: list[str]):
+        store = self.calibration.scores
+        key = (tuple(det_ids), store.version())
+        if key not in self._fusions:
+            self._fusions[key] = build_fusion(store, det_ids)
+        return self._fusions[key]
+
     def _consensus(self, results, segmentation,
-                   dets: dict[str, BaseDetector] | None = None) -> ConsensusResult:
+                   dets: dict[str, BaseDetector] | None = None,
+                   units: float | None = None) -> ConsensusResult:
         ok = [r for r in results if r.score is not None]
         notes: list[str] = []
         contributors: list[ConsensusEntry] = []
@@ -365,6 +408,31 @@ class Engine:
             else:
                 verdict = Verdict.uncertain
 
+        # statistical fusion: replaces the heuristic vote when per-sample
+        # calibration scores exist for the detectors that ran -------------
+        method, evidence = "weighted", None
+        if ok:
+            stacked = self._stacked(ok, dets or {})
+            if stacked is not None:
+                score, verdict, evidence, coefs = stacked
+                method = "stacked"
+                for c in contributors:
+                    c.weight = round(coefs.get(c.detector_id, 0.0), 3)
+                if evidence["excluded"]:
+                    notes.append("not in the statistical fusion (no calibration "
+                                 "scores yet - recalibrate): "
+                                 + ", ".join(evidence["excluded"]))
+            elif any(r.calibration.status == "calibrated" for r in ok):
+                notes.append("statistical fusion unavailable - recalibrate on a "
+                             "labeled set so per-sample scores are stored")
+
+        min_units = float(self.effective_settings().get("min_words", 40))
+        if units is not None and units < min_units:
+            verdict = Verdict.insufficient
+            notes.insert(0, f"too little text for a verdict (~{units:.0f} words; "
+                            f"need {min_units:.0f}) - scores are shown, but "
+                            "they are too noisy to rely on")
+
         # cross-detector sentence heatmap ------------------------------
         seg_scores: list[SegmentScore] = []
         per_det_segments: dict[str, dict[str, float]] = {}
@@ -394,7 +462,50 @@ class Engine:
         return ConsensusResult(
             score=round(score, 4), verdict=verdict, agreement=round(agreement, 3),
             contributors=contributors, segment_scores=seg_scores,
-            notes=notes)
+            notes=notes, method=method, evidence=evidence)
+
+    def _stacked(self, ok, dets: dict[str, BaseDetector]):
+        """Fused P(AI) + interval + conformal verdict, or None."""
+        store = self.calibration.scores
+        have = set()
+        for ds in store.datasets():
+            have |= set(store.load(ds)["scores"])
+        members, excluded = [], []
+        for r in ok:
+            det = dets.get(r.detector_id)
+            muted = det is not None and self.juror_weight(det, None) == 0
+            if muted or r.raw_score is None:
+                continue
+            (members if r.detector_id in have else excluded).append(r)
+        if not members:
+            return None
+        ids = sorted(r.detector_id for r in members)
+        fusion = self._fusion_for(ids)
+        if fusion is None:
+            return None
+        raw = {r.detector_id: r.raw_score for r in members}
+        out = fusion.score([raw[d] for d in fusion.det_ids])
+        alpha = float(self.effective_settings().get("fpr_target", 0.05))
+        if out["p_human"] <= alpha:
+            verdict = Verdict.likely_ai
+        elif out["p_ai"] <= alpha:
+            verdict = Verdict.likely_human
+        else:
+            verdict = Verdict.uncertain
+        tpr = fusion.cv_tpr.get(0.01 if alpha <= 0.01 else 0.05)
+        evidence = {
+            "interval": [round(v, 4) for v in out["interval"]],
+            "p_human": round(out["p_human"], 4), "p_ai": round(out["p_ai"], 4),
+            "alpha": alpha, "dataset": fusion.dataset, "n_train": fusion.n,
+            "n_human": int(len(fusion.human_ref)), "n_ai": int(len(fusion.ai_ref)),
+            "cv_auroc": round(fusion.cv_auc, 4) if fusion.cv_auc is not None else None,
+            "cv_tpr": round(tpr["tpr"], 4) if tpr else None,
+            "cv_fpr": round(tpr["fpr"], 4) if tpr else None,
+            "members": fusion.det_ids,
+            "excluded": [r.name for r in excluded],
+        }
+        coefs = {d: float(c) for d, c in zip(fusion.det_ids, fusion.w[1:])}
+        return out["p"], verdict, evidence, coefs
 
     # ------------------------------------------------------------- history
 
@@ -446,6 +557,14 @@ class _ProviderProbe:
 
     def build(self, pid: str):
         return self._pm.build(pid)
+
+
+def evidence_units(text: str) -> float:
+    """Length in 'words', counting two CJK characters as one word."""
+    import re
+    cjk = len(re.findall(r"[\u3400-\u9fff\uf900-\ufaff]", text))
+    latin = len(re.findall(r"[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*", text))
+    return latin + cjk / 2
 
 
 def _band(r) -> str:
